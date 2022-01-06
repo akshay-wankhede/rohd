@@ -28,7 +28,7 @@ class SystemVerilogSynthesizer extends Synthesizer {
   /// To generate this SystemVerilog:  `sig_c = sig_a & sig_b`
   /// Based on this module definition: `c <= a & b`
   /// The values for [inputs] and [outputs] should be:
-  /// inputs:  `{ 'a' : 'sig_a', 'b' : 'sig_b'}`
+  /// inputs:  `{ 'a' : 'sig_a', 'b' : 'sig_b'}` and
   /// outputs: `{ 'c' : 'sig_c' }`
   static String instantiationVerilogWithParameters(
       Module module,
@@ -72,7 +72,7 @@ class SystemVerilogSynthesizer extends Synthesizer {
 
 /// Allows a [Module] to define a custom implementation of SystemVerilog to be
 /// injected in generated output instead of instantiating a separate `module`.
-mixin CustomSystemVerilog on Module {
+mixin CustomSystemVerilog on Module implements CustomFunctionality {
   /// Generates custom SystemVerilog to be injected in place of a `module` instantiation.
   ///
   /// The [instanceType] and [instanceName] represent the type and name, respectively of

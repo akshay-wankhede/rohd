@@ -10,6 +10,12 @@
 
 import 'package:rohd/rohd.dart';
 
+/// An object which implements custom simulation functionality.
+///
+/// Modules that are [CustomFunctionality] must have appropriate synthesis instructions
+/// for supported synthesizers.
+mixin CustomFunctionality on Module {}
+
 /// An object capable of converting a module into some new output format
 abstract class Synthesizer {
   /// Determines whether [module] needs a separate definition or can just be described in-line.
