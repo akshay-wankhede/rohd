@@ -16,6 +16,23 @@ import 'package:rohd/rohd.dart';
 /// for supported synthesizers.
 mixin CustomFunctionality on Module {}
 
+abstract class DelegatingCustomFunctionalityModule extends Module
+    with CustomFunctionality, CustomSystemVerilog {
+  CustomFunctionality get delegate;
+
+  @override
+  String instantiationVerilog(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    if (delegate is! CustomSystemVerilog) {
+      throw Exception(
+          'Delegate module $delegate does not support conversion to SystemVerilog.');
+    }
+    var svDelegate = delegate as CustomSystemVerilog;
+    return svDelegate.instantiationVerilog(
+        instanceType, instanceName, inputs, outputs);
+  }
+}
+
 /// An object capable of converting a module into some new output format
 abstract class Synthesizer {
   /// Determines whether [module] needs a separate definition or can just be described in-line.
