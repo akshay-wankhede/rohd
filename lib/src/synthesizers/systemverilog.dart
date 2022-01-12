@@ -354,14 +354,11 @@ class SystemVerilogSynthSubModuleInstantiation
   Map<String, String> _moduleInputsMap() {
     return inputMapping.map((synthLogic, logic) => MapEntry(
         logic.name, // port name guaranteed to match
-        synthLogicNameToInlineableSynthSubmoduleMap?[synthLogic.isConst
-                    ? synthLogic.constant.toString()
-                    : synthLogic.name]
+        synthLogicNameToInlineableSynthSubmoduleMap?[
+                    _SystemVerilogSynthesisResult._srcName(synthLogic)]
                 ?.inlineVerilog() ??
-            (synthLogic.isConst
-                ? synthLogic.constant.toString()
-                : synthLogic.name)));
-    //TODO: this logic is less efficient than it could be, multiple isConst calls...
+            _SystemVerilogSynthesisResult._srcName(synthLogic)));
+    //TODO: this logic is less efficient than it could be, multiple _srcName calls...
   }
 
   String inlineVerilog() {
