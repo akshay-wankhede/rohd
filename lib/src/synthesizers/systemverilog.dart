@@ -9,6 +9,8 @@
 ///
 
 import 'package:rohd/rohd.dart';
+import 'package:rohd/src/synthesizers/utilities/utilities.dart';
+import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 import 'package:rohd/src/utilities/traverseable_collection.dart';
 import 'package:rohd/src/utilities/uniquifier.dart';
 
@@ -17,7 +19,7 @@ import 'package:rohd/src/utilities/uniquifier.dart';
 /// Attempts to maintain signal naming and structure as much as possible.
 class SystemVerilogSynthesizer extends Synthesizer {
   @override
-  bool generatesDefinition(Module module) => module is! CustomSystemVerilog;
+  bool generatesDefinition(Module module) => module is! CustomFunctionality;
 
   /// Creates a line of SystemVerilog that instantiates [module].
   ///
@@ -61,6 +63,14 @@ class SystemVerilogSynthesizer extends Synthesizer {
           ')';
     }
     return '$instanceType $parameterString $instanceName($connectionsStr);';
+  }
+
+  static String definitionName(int width, String name) {
+    if (width > 1) {
+      return '[${width - 1}:0] $name';
+    } else {
+      return name;
+    }
   }
 
   @override
@@ -118,10 +128,10 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated contents of the module
   late final String _moduleContentsString;
 
-  final _SynthModuleDefinition _synthModuleDefinition;
+  final SynthModuleDefinition _synthModuleDefinition;
   _SystemVerilogSynthesisResult(
       Module module, Map<Module, String> moduleToInstanceTypeMap)
-      : _synthModuleDefinition = _SynthModuleDefinition(module),
+      : _synthModuleDefinition = SystemVeriogSynthModuleDefinition(module),
         super(module, moduleToInstanceTypeMap) {
     _portsString = _verilogPorts();
     _moduleContentsString = _verilogModuleContents(moduleToInstanceTypeMap);
@@ -144,14 +154,16 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   List<String> _verilogInputs() {
     var declarations = _synthModuleDefinition.inputs
-        .map((sig) => 'input logic ${sig.definitionName()}')
+        .map((sig) =>
+            'input logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
     return declarations;
   }
 
   List<String> _verilogOutputs() {
     var declarations = _synthModuleDefinition.outputs
-        .map((sig) => 'output logic ${sig.definitionName()}')
+        .map((sig) =>
+            'output logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
     return declarations;
   }
@@ -160,17 +172,33 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
     var declarations = [];
     for (var sig in _synthModuleDefinition.internalNets) {
       if (sig.needsDeclaration) {
-        declarations.add('logic ${sig.definitionName()};');
+        declarations.add(
+            'logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)};');
       }
     }
     return declarations.join('\n');
   }
 
+  static String _srcName(SynthLogic src) {
+    if (src.isConst) {
+      var constant = src.constant;
+      if (constant.isValid) {
+        return constant.toInt().toString();
+      } else {
+        return constant.toString();
+      }
+    } else {
+      return src.name;
+    }
+  }
+
   String _verilogAssignments() {
     var assignmentLines = [];
     for (var assignment in _synthModuleDefinition.assignments) {
+      var srcName = '';
+
       assignmentLines
-          .add('assign ${assignment.dst.name} = ${assignment.srcName()};');
+          .add('assign ${assignment.dst.name} = ${_srcName(assignment.src)};');
     }
     return assignmentLines.join('\n');
   }
@@ -188,7 +216,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
       var instanceType =
           moduleToInstanceTypeMap[subModuleInstantiation.module] ?? '*NONE*';
       var instantiationVerilog =
-          subModuleInstantiation.instantiationVerilog(instanceType);
+          subModuleInstantiation.instantiationCode(instanceType);
       if (instantiationVerilog != null) {
         subModuleLines.add(instantiationVerilog);
       }
@@ -223,211 +251,14 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 }
 
-/// Represents an instantiation of a module within another module.
-class _SynthSubModuleInstantiation {
-  final Module module;
-  final String name;
-  final Map<_SynthLogic, Logic> inputMapping = {};
-  final Map<_SynthLogic, Logic> outputMapping = {};
-  bool _needsDeclaration = true;
-  bool get needsDeclaration => _needsDeclaration;
-  Map<String, _SynthSubModuleInstantiation>?
-      _synthLogicNameToInlineableSynthSubmoduleMap;
-  _SynthSubModuleInstantiation(this.module, this.name);
-
-  @override
-  String toString() {
-    return "_SynthSubModuleInstantiation '$name', module name:'${module.name}'";
-  }
-
-  void clearDeclaration() {
-    _needsDeclaration = false;
-  }
-
-  //TODO: make this verilog stuff more generic for inlining in other IRs
-  Map<String, String> _moduleInputsMap() {
-    return inputMapping.map((synthLogic, logic) => MapEntry(
-        logic.name, // port name guaranteed to match
-        _synthLogicNameToInlineableSynthSubmoduleMap?[synthLogic.name]
-                ?.inlineVerilog() ??
-            synthLogic.name));
-  }
-
-  String inlineVerilog() {
-    return '(' +
-        (module as InlineSystemVerilog).inlineVerilog(_moduleInputsMap()) +
-        ')';
-  }
-
-  String? instantiationVerilog(String instanceType) {
-    if (!needsDeclaration) return null;
-    return SystemVerilogSynthesizer.instantiationVerilogWithParameters(
-      module,
-      instanceType,
-      name,
-      _moduleInputsMap(),
-      outputMapping.map((synthLogic, logic) => MapEntry(
-          logic.name, // port name guaranteed to match
-          synthLogic.name)),
-    );
-  }
-}
-
-/// Represents the definition of a module.
-class _SynthModuleDefinition {
-  final Module module;
-  final List<_SynthAssignment> assignments = [];
-  final Set<_SynthLogic> internalNets = {};
-  final Set<_SynthLogic> inputs = {};
-  final Set<_SynthLogic> outputs = {};
-  final Map<Logic, _SynthLogic> logicToSynthMap = {};
-
-  final Map<Module, _SynthSubModuleInstantiation>
-      moduleToSubModuleInstantiationMap = {};
-  _SynthSubModuleInstantiation _getSynthSubModuleInstantiation(Module m) {
-    if (moduleToSubModuleInstantiationMap.containsKey(m)) {
-      return moduleToSubModuleInstantiationMap[m]!;
-    } else {
-      var newSSMI = _SynthSubModuleInstantiation(
-          m, _getUniqueSynthSubModuleInstantiationName(m.uniqueInstanceName));
-      moduleToSubModuleInstantiationMap[m] = newSSMI;
-      return newSSMI;
-    }
-  }
-
-  @override
-  String toString() {
-    return "module name: '${module.name}'";
-  }
-
-  late final Uniquifier _synthLogicNameUniquifier;
-  String _getUniqueSynthLogicName(String? initialName, bool portName) {
-    if (portName && initialName == null) {
-      throw Exception('Port name cannot be null.');
-    }
-    return _synthLogicNameUniquifier.getUniqueName(
-        initialName: initialName, reserved: portName);
-  }
-
-  final Uniquifier _synthSubModuleInstantiationNameUniquifier = Uniquifier();
-  String _getUniqueSynthSubModuleInstantiationName(String? initialName) {
-    return _synthSubModuleInstantiationNameUniquifier.getUniqueName(
-        initialName: initialName, nullStarter: 'm');
-  }
-
-  _SynthLogic? _getSynthLogic(Logic? logic, bool allowPortName) {
-    if (logic == null) {
-      return null;
-    } else if (logicToSynthMap.containsKey(logic)) {
-      return logicToSynthMap[logic]!;
-    } else {
-      var newSynth = _SynthLogic(
-          logic, _getUniqueSynthLogicName(logic.name, allowPortName),
-          renameable: !allowPortName);
-      logicToSynthMap[logic] = newSynth;
-      return newSynth;
-    }
-  }
-
-  _SynthModuleDefinition(this.module) {
-    _synthLogicNameUniquifier = Uniquifier(
-        reservedNames: {...module.inputs.keys, ...module.outputs.keys});
-
-    // start by traversing output signals
-    var logicsToTraverse = TraverseableCollection<Logic>()
-      ..addAll(module.outputs.values);
-    for (var output in module.outputs.values) {
-      outputs.add(_getSynthLogic(output, true)!);
-    }
-
-    // make sure disconnected inputs are included
-    for (var input in module.inputs.values) {
-      inputs.add(_getSynthLogic(input, true)!);
-    }
-
-    // make sure floating modules are included
-    for (var subModule in module.subModules) {
-      _getSynthSubModuleInstantiation(subModule);
-      logicsToTraverse.addAll(subModule.inputs.values);
-      logicsToTraverse.addAll(subModule.outputs.values);
-    }
-
-    // search for other modules contained within this module
-
-    for (var i = 0; i < logicsToTraverse.length; i++) {
-      var receiver = logicsToTraverse[i];
-      var driver = receiver.srcConnection;
-
-      var receiverIsModuleInput = module.isInput(receiver);
-      var receiverIsModuleOutput = module.isOutput(receiver);
-      var driverIsModuleInput = driver == null ? false : module.isInput(driver);
-      var driverIsModuleOutput =
-          driver == null ? false : module.isOutput(driver);
-
-      var synthReceiver = _getSynthLogic(
-          receiver, receiverIsModuleInput || receiverIsModuleOutput)!;
-      var synthDriver =
-          _getSynthLogic(driver, driverIsModuleInput || driverIsModuleOutput);
-
-      if (receiverIsModuleInput) {
-        inputs.add(synthReceiver);
-      } else if (receiverIsModuleOutput) {
-        outputs.add(synthReceiver);
-      } else {
-        internalNets.add(synthReceiver);
-      }
-
-      var receiverIsSubModuleOutput =
-          receiver.isOutput && (receiver.parentModule?.parent == module);
-      if (receiverIsSubModuleOutput) {
-        var subModule = receiver.parentModule!;
-        var subModuleInstantiation = _getSynthSubModuleInstantiation(subModule);
-        subModuleInstantiation.outputMapping[synthReceiver] = receiver;
-
-        for (var element in subModule.inputs.values) {
-          if (!logicsToTraverse.contains(element)) {
-            logicsToTraverse.add(element);
-          }
-        }
-      } else if (driver != null) {
-        if (!module.isInput(receiver)) {
-          // stop at the input to this module
-          if (!logicsToTraverse.contains(driver)) {
-            logicsToTraverse.add(driver);
-          }
-          assignments.add(_SynthAssignment(synthDriver!, synthReceiver));
-        }
-      } else if (driver == null && receiver.hasValidValue()) {
-        assignments.add(_SynthAssignment(receiver.valueInt, synthReceiver));
-      } else if (driver == null && !receiver.isFloating()) {
-        // this is a signal that is *partially* invalid (e.g. 0b1z1x0)
-        assignments.add(_SynthAssignment(receiver.value, synthReceiver));
-      }
-
-      var receiverIsSubModuleInput =
-          receiver.isInput && (receiver.parentModule?.parent == module);
-      if (receiverIsSubModuleInput) {
-        var subModule = receiver.parentModule!;
-        var subModuleInstantiation = _getSynthSubModuleInstantiation(subModule);
-        subModuleInstantiation.inputMapping[synthReceiver] = receiver;
-      }
-    }
-
-    _collapseAssignments();
-
+class SystemVeriogSynthModuleDefinition extends SynthModuleDefinition {
+  SystemVeriogSynthModuleDefinition(Module module)
+      : super(module,
+            ssmiBuilder: (Module m, String instantiationName) =>
+                SystemVerilogSynthSubModuleInstantiation(
+                    m, instantiationName)) {
     _collapseChainableModules();
   }
-
-  //TODO: collapse in-line assignments where the driver is equal to eliminate duplicates (decrease verbosity)
-  //  for example, merge these two:
-  //      assign out = {b,a};  // swizzle_0
-  //      assign out_0 = {b,a};  // swizzle
-  // void _collapseEquivalentInlineModules() {
-  //   //WARNING: do not collapse non-renameable outputs directly, create a buffer signal
-  //   //  maybe do this before collapsing assignments, always add a buffer, then let assignment collapsing handle it?
-
-  //   // this can be easily done using existing merge capabilities for synthlogic?
-  // }
 
   void _collapseChainableModules() {
     // collapse multiple lines of in-line assignments into one where they are unnamed one-liners
@@ -448,7 +279,8 @@ class _SynthModuleDefinition {
 
     var inlineableSubmoduleInstantiations = module.subModules
         .whereType<InlineSystemVerilog>()
-        .map((subModule) => _getSynthSubModuleInstantiation(subModule));
+        .map((subModule) => getSynthSubModuleInstantiation(subModule)
+            as SystemVerilogSynthSubModuleInstantiation);
 
     var signalNameUsage = <String,
         int>{}; // number of times each signal name is used by any module
@@ -456,11 +288,16 @@ class _SynthModuleDefinition {
     for (var subModuleInstantiation
         in moduleToSubModuleInstantiationMap.values) {
       for (var inputSynthLogic in subModuleInstantiation.inputMapping.keys) {
+        if (inputSynthLogic.isConst) {
+          continue;
+        }
+
         var inputSynthLogicName = inputSynthLogic.name;
         if (synthModuleInputNames.contains(inputSynthLogicName)) {
           // dont worry about inputs to THIS module
           continue;
         }
+
         if (!signalNameUsage.containsKey(inputSynthLogicName)) {
           signalNameUsage[inputSynthLogicName] = 1;
         } else {
@@ -487,7 +324,7 @@ class _SynthModuleDefinition {
                 submoduleInstantiation.outputMapping.keys.first.name));
 
     var synthLogicNameToInlineableSynthSubmoduleMap =
-        <String, _SynthSubModuleInstantiation>{};
+        <String, SystemVerilogSynthSubModuleInstantiation>{};
     for (var submoduleInstantiation
         in singleUsageInlineableSubmoduleInstantiations) {
       var outputSynthLogic = submoduleInstantiation.outputMapping.keys.first;
@@ -499,134 +336,51 @@ class _SynthModuleDefinition {
 
     for (var subModuleInstantiation
         in moduleToSubModuleInstantiationMap.values) {
-      subModuleInstantiation._synthLogicNameToInlineableSynthSubmoduleMap =
+      subModuleInstantiation as SystemVerilogSynthSubModuleInstantiation;
+      subModuleInstantiation.synthLogicNameToInlineableSynthSubmoduleMap =
           synthLogicNameToInlineableSynthSubmoduleMap;
     }
   }
-
-  void _collapseAssignments() {
-    // there might be more assign statements than necessary, so let's ditch them
-    var prevAssignmentCount = 0;
-    while (prevAssignmentCount != assignments.length) {
-      // keep looping until it stops shrinking
-      var reducedAssignments = <_SynthAssignment>[];
-      for (var assignment in assignments) {
-        var dst = assignment.dst;
-        _SynthLogic? src =
-            assignment._src is _SynthLogic ? assignment._src : null;
-        if (dst.name == src?.name) {
-          //TODO: is this ok? just let it continue and delete the assignment?
-          throw Exception(
-              'Circular assignment detected between $dst and $src.');
-        }
-        if (src != null) {
-          if (dst.renameable && src.renameable) {
-            if (Module.isUnpreferred(dst.name)) {
-              dst.mergeName(src);
-            } else {
-              src.mergeName(dst);
-            }
-          } else if (dst.renameable) {
-            dst.mergeName(src);
-          } else if (src.renameable) {
-            src.mergeName(dst);
-          } else {
-            reducedAssignments.add(assignment);
-          }
-        } else if (dst.renameable) {
-          // src is a constant, feed that string directly in
-          dst.mergeConst(assignment.srcName());
-        } else {
-          // nothing can be done here, keep it as-is
-          reducedAssignments.add(assignment);
-        }
-      }
-      prevAssignmentCount = assignments.length;
-      assignments.clear();
-      assignments.addAll(reducedAssignments);
-    }
-  }
 }
 
-/// Represents a logic signal in the generated code within a module.
-class _SynthLogic {
-  final Logic logic;
-  final String _name;
-  final bool _renameable;
-  bool get renameable => _mergedNameSynthLogic?.renameable ?? _renameable;
-  bool _needsDeclaration = true;
-  _SynthLogic? _mergedNameSynthLogic;
-  String? _mergedConst;
-  bool get needsDeclaration => _needsDeclaration;
-  String get name => _mergedNameSynthLogic?.name ?? _mergedConst ?? _name;
+class SystemVerilogSynthSubModuleInstantiation
+    extends SynthSubModuleInstantiation {
+  Map<String, SystemVerilogSynthSubModuleInstantiation>?
+      synthLogicNameToInlineableSynthSubmoduleMap;
 
-  _SynthLogic(this.logic, this._name, {bool renameable = true})
-      : _renameable = renameable;
+  SystemVerilogSynthSubModuleInstantiation(Module module, String name)
+      : super(module, name);
+
+  Map<String, String> _moduleInputsMap() {
+    return inputMapping.map((synthLogic, logic) => MapEntry(
+        logic.name, // port name guaranteed to match
+        synthLogicNameToInlineableSynthSubmoduleMap?[synthLogic.isConst
+                    ? synthLogic.constant.toString()
+                    : synthLogic.name]
+                ?.inlineVerilog() ??
+            (synthLogic.isConst
+                ? synthLogic.constant.toString()
+                : synthLogic.name)));
+    //TODO: this logic is less efficient than it could be, multiple isConst calls...
+  }
+
+  String inlineVerilog() {
+    return '(' +
+        (module as InlineSystemVerilog).inlineVerilog(_moduleInputsMap()) +
+        ')';
+  }
 
   @override
-  String toString() {
-    return "'$name', logic name: '${logic.name}'";
-  }
-
-  void clearDeclaration() {
-    _needsDeclaration = false;
-    _mergedNameSynthLogic?.clearDeclaration();
-  }
-
-  void mergeName(_SynthLogic other) {
-    // print("Renaming $name to ${other.name}");
-    if (!renameable) {
-      throw Exception('This _SynthLogic ($this) cannot be renamed to $other.');
-    }
-    _mergedConst = null;
-    _mergedNameSynthLogic
-        ?.mergeName(this); // in case we're changing direction of merge
-    _mergedNameSynthLogic = other;
-    _needsDeclaration = false;
-  }
-
-  void mergeConst(String constant) {
-    // print("Renaming $name to const ${constant}");
-    if (!renameable) {
-      throw Exception(
-          'This _SynthLogic ($this) cannot be renamed to $constant.');
-    }
-    _mergedNameSynthLogic = null;
-    _mergedConst = constant;
-    _needsDeclaration = false;
-  }
-
-  //TODO: extract systemverilog naming to systemverilog synthesizer
-  String definitionName() {
-    if (logic.width > 1) {
-      return '[${logic.width - 1}:0] $name';
-    } else {
-      return name;
-    }
-  }
-}
-
-class _SynthAssignment {
-  final _SynthLogic dst;
-  final dynamic _src;
-  _SynthAssignment(this._src, this.dst);
-
-  @override
-  String toString() {
-    return '${dst.name} <= ${srcName()}';
-  }
-
-  String srcName() {
-    if (_src is LogicValue) {
-      return "'" + _src.toString();
-    } else if (_src is int) {
-      return _src.toString();
-    } else if (_src is LogicValues) {
-      return (_src as LogicValues).toString();
-    } else if (_src is _SynthLogic) {
-      return _src.name;
-    } else {
-      throw Exception("Don't know how to synthesize value: $_src");
-    }
+  String? instantiationCode(String instanceType) {
+    if (!needsDeclaration) return null;
+    return SystemVerilogSynthesizer.instantiationVerilogWithParameters(
+      module,
+      instanceType,
+      name,
+      _moduleInputsMap(),
+      outputMapping.map((synthLogic, logic) => MapEntry(
+          logic.name, // port name guaranteed to match
+          synthLogic.name)),
+    );
   }
 }

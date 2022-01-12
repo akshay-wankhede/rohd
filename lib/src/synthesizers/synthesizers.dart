@@ -4,3 +4,4 @@
 export 'synthesizer.dart';
 export 'systemverilog.dart';
 export 'synth_builder.dart';
+export 'circt.dart';
