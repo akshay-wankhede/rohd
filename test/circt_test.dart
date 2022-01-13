@@ -11,8 +11,6 @@
 import 'package:rohd/rohd.dart';
 import 'package:test/test.dart';
 
-// TODO: test that exception is thrown if no support
-
 class SVMod extends Module with CustomSystemVerilog {
   SVMod(Logic a) {
     a = addInput('a', a);
@@ -25,17 +23,33 @@ class SVMod extends Module with CustomSystemVerilog {
   }
 }
 
-class TopMod extends Module {
-  TopMod(Logic a) {
+class TopModSV extends Module {
+  TopModSV(Logic a) {
     a = addInput('a', a);
     SVMod(a);
   }
 }
 
+class CirctMod extends Module {
+  CirctMod(Logic a, Logic b) : super(name: 'circtmod') {
+    a = addInput('a', a);
+    b = addInput('b', b);
+    var notA = addOutput('notA');
+    notA <= ~a;
+  }
+}
+
 void main() {
   test('unsupported exception', () async {
-    var mod = TopMod(Logic());
+    var mod = TopModSV(Logic());
     await mod.build();
     expect(() => mod.generateSynth(CIRCTSynthesizer()), throwsException);
+  });
+
+  test('simple gen', () async {
+    var mod = CirctMod(Logic(), Logic());
+    await mod.build();
+    var gen = mod.generateSynth(CIRCTSynthesizer());
+    print(gen);
   });
 }

@@ -29,6 +29,8 @@ class CIRCTSynthesizer extends Synthesizer {
       Map<String, String> outputs,
       Map<String, int> portWidths) {
     if (module is CustomCIRCT) {
+      return module.instantiationCIRCT(
+          instanceType, instanceName, inputs, outputs);
     } else if (module is CustomFunctionality) {
       throw Exception('Module $module defines custom functionality but not'
           'an implementation in CIRCT!');
@@ -40,11 +42,15 @@ class CIRCTSynthesizer extends Synthesizer {
         .join(', ');
     var outputStr = outputs.keys.map((e) => '$e: ${portWidths[e]}');
 
-    return '$receiverStr = hw.instance "$instanceName" @$instanceType ($inputStr) -> ($outputStr)';
+    return '$receiverStr = hw.instance "$instanceName"'
+        ' @$instanceType ($inputStr) -> ($outputStr)';
   }
 }
 
-mixin CustomCIRCT on Module implements CustomFunctionality {}
+mixin CustomCIRCT on Module implements CustomFunctionality {
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs);
+}
 
 class _CIRCTSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated ports
@@ -105,13 +111,13 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   String _circtInputs() {
     return synthModuleDefinition.inputs
         .map((sig) => '%${sig.name}: i${sig.logic.width}')
-        .join(',\n');
+        .join(', ');
   }
 
   String _circtOutputs() {
     return synthModuleDefinition.outputs
         .map((sig) => '${sig.name}: i${sig.logic.width}')
-        .join(',\n');
+        .join(', ');
   }
 
   String _circtOutputFooter() {
@@ -124,19 +130,23 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   }
 
   @override
-  // TODO: implement matchHashCode
-  int get matchHashCode => throw UnimplementedError();
+  int get matchHashCode =>
+      _inputsString.hashCode ^
+      _outputsString.hashCode ^
+      _outputsFooter.hashCode ^
+      _moduleContentsString.hashCode;
 
   @override
-  bool matchesImplementation(SynthesisResult other) {
-    // TODO: implement matchesImplementation
-    throw UnimplementedError();
-  }
+  bool matchesImplementation(SynthesisResult other) =>
+      other is _CIRCTSynthesisResult &&
+      other._inputsString == _inputsString &&
+      other._outputsString == _outputsString &&
+      other._outputsFooter == _outputsFooter &&
+      other._moduleContentsString == _moduleContentsString;
 
   @override
   String toFileContents() {
-    // TODO: implement toFileContents
-    throw UnimplementedError();
+    return _toCIRCT(moduleToInstanceTypeMap);
   }
 
   String _toCIRCT(Map<Module, String> moduleToInstanceTypeMap) {

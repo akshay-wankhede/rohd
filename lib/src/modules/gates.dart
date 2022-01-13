@@ -11,7 +11,7 @@
 import 'package:rohd/rohd.dart';
 
 /// A gate [Module] that performs bit-wise inversion.
-class NotGate extends Module with InlineSystemVerilog {
+class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
   /// Name for a port of this module.
   late final String _a, _out;
 
@@ -50,6 +50,16 @@ class NotGate extends Module with InlineSystemVerilog {
     if (inputs.length != 1) throw Exception('Gate has exactly one input.');
     var a = inputs[_a]!;
     return '~$a';
+  }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 1);
+    assert(outputs.length == 1);
+    var aName = inputs[_a]!;
+    var outName = outputs[_out]!;
+    return '%$outName = spv.Not %$aName : i${a.width}';
   }
 }
 
