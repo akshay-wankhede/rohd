@@ -52,7 +52,7 @@ void main() {
       var counter = Counter(Logic(), reset);
       await counter.build();
       // WaveDumper(counter);
-      // File('tmp_counter.sv').writeAsStringSync(counter.generateSynth());
+      // File('tmp_counter.sv').writeAsStringSync(counter.generateSynth(SystemVerilogSynthesizer()));
 
       // check that 1 timestep after reset, the value has reset properly
       unawaited(reset.nextPosedge
@@ -75,7 +75,9 @@ void main() {
       ];
       await SimCompare.checkFunctionalVector(counter, vectors);
       var simResult = SimCompare.iverilogVector(
-          counter.generateSynth(), counter.runtimeType.toString(), vectors,
+          counter.generateSynth(SystemVerilogSynthesizer()),
+          counter.runtimeType.toString(),
+          vectors,
           signalToWidthMap: {'val': 8});
       expect(simResult, equals(true));
     });

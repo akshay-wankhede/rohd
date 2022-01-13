@@ -54,14 +54,16 @@ void main() {
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
     var simResult = SimCompare.iverilogVector(
-        mod.generateSynth(), mod.runtimeType.toString(), vectors);
+        mod.generateSynth(SystemVerilogSynthesizer()),
+        mod.runtimeType.toString(),
+        vectors);
     expect(simResult, equals(true));
   });
 
   test('collapse pretty', () async {
     var mod = CollapseTestModule(Logic(), Logic());
     await mod.build();
-    var synth = mod.generateSynth();
+    var synth = mod.generateSynth(SystemVerilogSynthesizer());
 
     // File('tmp.sv').writeAsStringSync(synth);
     // print(synth);

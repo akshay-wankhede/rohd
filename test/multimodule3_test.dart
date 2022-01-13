@@ -56,7 +56,9 @@ void main() {
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
       var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(), ftm.runtimeType.toString(), vectors);
+          ftm.generateSynth(SystemVerilogSynthesizer()),
+          ftm.runtimeType.toString(),
+          vectors);
       expect(simResult, equals(true));
     });
   });

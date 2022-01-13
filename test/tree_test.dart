@@ -48,7 +48,7 @@ void main() {
   //   (Logic a, Logic b) => Mux(a > b, a, b).y
   // );
   // mod.build();
-  // File('tmp_tree.sv').writeAsStringSync(mod.generateSynth());
+  // File('tmp_tree.sv').writeAsStringSync(mod.generateSynth(SystemVerilogSynthesizer()));
 
   tearDown(() {
     Simulator.reset();
@@ -60,7 +60,7 @@ void main() {
           List<Logic>.generate(16, (index) => Logic(width: 8)),
           (Logic a, Logic b) => Mux(a > b, a, b).y);
       await mod.build();
-      // File('tmp_tree.sv').writeAsStringSync(mod.generateSynth());
+      // File('tmp_tree.sv').writeAsStringSync(mod.generateSynth(SystemVerilogSynthesizer()));
 
       var vectors = [
         Vector({
@@ -71,7 +71,9 @@ void main() {
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
       var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(), mod.runtimeType.toString() + '_3', vectors,
+          mod.generateSynth(SystemVerilogSynthesizer()),
+          mod.runtimeType.toString() + '_3',
+          vectors,
           signalToWidthMap: {
             ...{
               for (var i in List<int>.generate(16, (index) => index)) 'seq$i': 8

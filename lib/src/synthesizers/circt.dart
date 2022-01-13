@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2022 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// circt.dart
@@ -18,8 +18,7 @@ class CIRCTSynthesizer extends Synthesizer {
   @override
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap) {
-    // TODO: implement synthesize
-    throw UnimplementedError();
+    return _CIRCTSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 
   static String instantiationCIRCT(
@@ -29,6 +28,12 @@ class CIRCTSynthesizer extends Synthesizer {
       Map<String, String> inputs,
       Map<String, String> outputs,
       Map<String, int> portWidths) {
+    if (module is CustomCIRCT) {
+    } else if (module is CustomFunctionality) {
+      throw Exception('Module $module defines custom functionality but not'
+          'an implementation in CIRCT!');
+    }
+    //TODO: add a CIRCT verbatim for SystemVerilog available ones
     var receiverStr = outputs.values.map((e) => '%$e').join(', ');
     var inputStr = inputs.entries
         .map((e) => '${e.key} %${e.value}: i${portWidths[e.key]}')
@@ -38,6 +43,8 @@ class CIRCTSynthesizer extends Synthesizer {
     return '$receiverStr = hw.instance "$instanceName" @$instanceType ($inputStr) -> ($outputStr)';
   }
 }
+
+mixin CustomCIRCT on Module implements CustomFunctionality {}
 
 class _CIRCTSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated ports

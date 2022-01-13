@@ -32,7 +32,7 @@ void main() {
   test('instantiate', () async {
     var mod = TopModule(Logic(width: 2));
     await mod.build();
-    var sv = mod.generateSynth();
+    var sv = mod.generateSynth(SystemVerilogSynthesizer());
     expect(
         sv,
         contains(

@@ -52,7 +52,7 @@ void main() {
             .isNotEmpty)
         .isNotEmpty);
 
-    var synth = ftm.generateSynth();
+    var synth = ftm.generateSynth(SystemVerilogSynthesizer());
 
     // "z = 1" means it correctly traversed down from inputs
     assert(synth.contains('z = 1'));

@@ -63,7 +63,7 @@ Future<void> main({bool noPrint = false}) async {
   await counter.build();
 
   // Let's see what this module looks like as SystemVerilog, so we can pass it to other tools.
-  var systemVerilogCode = counter.generateSynth();
+  var systemVerilogCode = counter.generateSynth(SystemVerilogSynthesizer());
   if (!noPrint) print(systemVerilogCode);
 
   // Now let's try simulating!
