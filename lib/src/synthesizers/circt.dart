@@ -50,6 +50,9 @@ class CIRCTSynthesizer extends Synthesizer {
 mixin CustomCIRCT on Module implements CustomFunctionality {
   String instantiationCIRCT(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs);
+
+  static int _tempNameCounter = 0;
+  static String nextTempName() => '${_tempNameCounter++}';
 }
 
 class _CIRCTSynthesisResult extends SynthesisResult {

@@ -59,7 +59,11 @@ class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
     assert(outputs.length == 1);
     var aName = inputs[_a]!;
     var outName = outputs[_out]!;
-    return '%$outName = spv.Not %$aName : i${a.width}';
+    var negativeOneName = CustomCIRCT.nextTempName();
+    return [
+      '%$negativeOneName = hw.constant -1 : i${a.width}',
+      '%$outName = comb.xor %$aName, %$negativeOneName : i${out.width}'
+    ].join('\n');
   }
 }
 

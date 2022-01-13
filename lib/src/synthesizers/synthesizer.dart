@@ -22,6 +22,8 @@ abstract class DelegatingCustomFunctionalityModule extends Module
     with CustomFunctionality, CustomSystemVerilog {
   CustomFunctionality get delegate;
 
+  //TODO: add circt in here
+
   @override
   String instantiationVerilog(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
