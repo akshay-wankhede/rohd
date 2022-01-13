@@ -8,7 +8,9 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'package:meta/meta.dart';
 import 'package:rohd/rohd.dart';
+import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 
 /// An object which implements custom simulation functionality.
 ///
@@ -36,7 +38,7 @@ abstract class DelegatingCustomFunctionalityModule extends Module
 /// An object capable of converting a module into some new output format
 abstract class Synthesizer {
   /// Determines whether [module] needs a separate definition or can just be described in-line.
-  bool generatesDefinition(Module module);
+  bool generatesDefinition(Module module) => module is! CustomFunctionality;
 
   /// Synthesizes [module] into a [SynthesisResult], given the mapping in [moduleToInstanceTypeMap].
   SynthesisResult synthesize(
@@ -51,7 +53,10 @@ abstract class SynthesisResult {
   /// A [Map] from [Module] instances to synthesis instance type names.
   final Map<Module, String> moduleToInstanceTypeMap;
 
-  SynthesisResult(this.module, this.moduleToInstanceTypeMap);
+  final Synthesizer synthesizer;
+
+  SynthesisResult(this.module, this.moduleToInstanceTypeMap, this.synthesizer,
+      this.synthModuleDefinition);
 
   /// Whether two implementations are identical or not
   ///
@@ -74,4 +79,27 @@ abstract class SynthesisResult {
   /// Generates what could go into a file
   String toFileContents();
   //TODO: this could be a FileContents object of some sort, including file name and contents
+
+  @protected
+  final SynthModuleDefinition synthModuleDefinition;
+
+  @protected
+  String subModuleInstantiations(Map<Module, String> moduleToInstanceTypeMap) {
+    var subModuleLines = <String>[];
+    for (var subModuleInstantiation
+        in synthModuleDefinition.moduleToSubModuleInstantiationMap.values) {
+      if (synthesizer.generatesDefinition(subModuleInstantiation.module) &&
+          !moduleToInstanceTypeMap.containsKey(subModuleInstantiation.module)) {
+        throw Exception('No defined instance type found.');
+      }
+      var instanceType =
+          moduleToInstanceTypeMap[subModuleInstantiation.module] ?? '*NONE*';
+      var instantiationCode =
+          subModuleInstantiation.instantiationCode(instanceType);
+      if (instantiationCode != null) {
+        subModuleLines.add(instantiationCode);
+      }
+    }
+    return subModuleLines.join('\n');
+  }
 }

@@ -22,8 +22,20 @@ class CIRCTSynthesizer extends Synthesizer {
     throw UnimplementedError();
   }
 
-  static String definitionName(int width, String name) {
-    return '%$name: i$width';
+  static String instantiationCIRCT(
+      Module module,
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      Map<String, int> portWidths) {
+    var receiverStr = outputs.values.map((e) => '%$e').join(', ');
+    var inputStr = inputs.entries
+        .map((e) => '${e.key} %${e.value}: i${portWidths[e.key]}')
+        .join(', ');
+    var outputStr = outputs.keys.map((e) => '$e: ${portWidths[e]}');
+
+    return '$receiverStr = hw.instance "$instanceName" @$instanceType ($inputStr) -> ($outputStr)';
   }
 }
 
@@ -32,20 +44,23 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   late final String _inputsString;
 
   late final String _outputsString;
+  late final String _outputsFooter;
 
   /// A cached copy of the generated contents of the module
   late final String _moduleContentsString;
 
-  final SynthModuleDefinition _synthModuleDefinition;
-
-  _CIRCTSynthesisResult(
-      Module module, Map<Module, String> moduleToInstanceTypeMap)
-      : _synthModuleDefinition = SynthModuleDefinition(module,
-            ssmiBuilder: (Module m, String instantiationName) =>
-                CIRCTSynthSubModuleInstantiation(m, instantiationName)),
-        super(module, moduleToInstanceTypeMap) {
+  _CIRCTSynthesisResult(Module module,
+      Map<Module, String> moduleToInstanceTypeMap, CIRCTSynthesizer synthesizer)
+      : super(
+            module,
+            moduleToInstanceTypeMap,
+            synthesizer,
+            SynthModuleDefinition(module,
+                ssmiBuilder: (Module m, String instantiationName) =>
+                    CIRCTSynthSubModuleInstantiation(m, instantiationName))) {
     _inputsString = _circtInputs();
     _outputsString = _circtOutputs();
+    _outputsFooter = _circtOutputFooter();
     _moduleContentsString = _circtModuleContents(moduleToInstanceTypeMap);
   }
 
@@ -67,13 +82,13 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   String _circtModuleContents(Map<Module, String> moduleToInstanceTypeMap) {
     return [
       _circtAssignments(),
-      // _verilogSubModuleInstantiations(moduleToInstanceTypeMap), //TODO
+      subModuleInstantiations(moduleToInstanceTypeMap), //TODO
     ].join('\n');
   }
 
   String _circtAssignments() {
     var assignmentLines = [];
-    for (var assignment in _synthModuleDefinition.assignments) {
+    for (var assignment in synthModuleDefinition.assignments) {
       assignmentLines
           .add('${assignment.dst.name} = ${_referenceName(assignment.src)};');
     }
@@ -81,19 +96,22 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   }
 
   String _circtInputs() {
-    return _synthModuleDefinition.inputs
-        .map(
-            (sig) => CIRCTSynthesizer.definitionName(sig.logic.width, sig.name))
+    return synthModuleDefinition.inputs
+        .map((sig) => '%${sig.name}: i${sig.logic.width}')
         .join(',\n');
   }
 
   String _circtOutputs() {
+    return synthModuleDefinition.outputs
+        .map((sig) => '${sig.name}: i${sig.logic.width}')
+        .join(',\n');
+  }
+
+  String _circtOutputFooter() {
     return 'hw.output ' +
-        _synthModuleDefinition.outputs
-            .map((e) => _referenceName(e))
-            .join(', ') +
+        synthModuleDefinition.outputs.map((e) => _referenceName(e)).join(', ') +
         ' : ' +
-        _synthModuleDefinition.outputs
+        synthModuleDefinition.outputs
             .map((e) => 'i${e.logic.width}')
             .join(', ');
   }
@@ -117,10 +135,9 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   String _toCIRCT(Map<Module, String> moduleToInstanceTypeMap) {
     var circtModuleName = moduleToInstanceTypeMap[module];
     return [
-      'hw.module @$circtModuleName(',
-      _inputsString,
-      ') {',
+      'hw.module @$circtModuleName($_inputsString) -> ($_outputsString) {',
       _moduleContentsString,
+      _outputsFooter,
       '}'
     ].join('\n');
   }
@@ -132,7 +149,18 @@ class CIRCTSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
 
   @override
   String? instantiationCode(String instanceType) {
-    throw UnimplementedError();
-    return 'hw.instance "$name" @$instanceType'; // TODO: inputs and outputs here!
+    if (!needsDeclaration) return null;
+    return CIRCTSynthesizer.instantiationCIRCT(
+        module,
+        instanceType,
+        name,
+        inputMapping.map((synthLogic, logic) => MapEntry(
+            logic.name, // port name guaranteed to match
+            synthLogic.name)),
+        outputMapping.map((synthLogic, logic) => MapEntry(
+            logic.name, // port name guaranteed to match
+            synthLogic.name)),
+        Map.fromEntries([...inputMapping.values, ...outputMapping.values]
+            .map((e) => MapEntry(e.name, e.width))));
   }
 }

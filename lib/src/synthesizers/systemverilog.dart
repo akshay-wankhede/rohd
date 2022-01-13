@@ -10,17 +10,11 @@
 
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
-import 'package:rohd/src/synthesizers/utilities/utilities.dart';
-import 'package:rohd/src/utilities/traverseable_collection.dart';
-import 'package:rohd/src/utilities/uniquifier.dart';
 
 /// A [Synthesizer] which generates equivalent SystemVerilog as the given [Module].
 ///
 /// Attempts to maintain signal naming and structure as much as possible.
 class SystemVerilogSynthesizer extends Synthesizer {
-  @override
-  bool generatesDefinition(Module module) => module is! CustomFunctionality;
-
   /// Creates a line of SystemVerilog that instantiates [module].
   ///
   /// The instantiation will create it as type [instanceType] and name [instanceName].
@@ -44,6 +38,9 @@ class SystemVerilogSynthesizer extends Synthesizer {
       if (module is CustomSystemVerilog) {
         return module.instantiationVerilog(
             instanceType, instanceName, inputs, outputs);
+      } else if (module is CustomFunctionality) {
+        throw Exception('Module $module defines custom functionality but not'
+            'an implementation in SystemVerilog!');
       }
     }
 
@@ -76,7 +73,7 @@ class SystemVerilogSynthesizer extends Synthesizer {
   @override
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap) {
-    return _SystemVerilogSynthesisResult(module, moduleToInstanceTypeMap);
+    return _SystemVerilogSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 }
 
@@ -128,11 +125,12 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated contents of the module
   late final String _moduleContentsString;
 
-  final SynthModuleDefinition _synthModuleDefinition;
   _SystemVerilogSynthesisResult(
-      Module module, Map<Module, String> moduleToInstanceTypeMap)
-      : _synthModuleDefinition = SystemVeriogSynthModuleDefinition(module),
-        super(module, moduleToInstanceTypeMap) {
+      Module module,
+      Map<Module, String> moduleToInstanceTypeMap,
+      SystemVerilogSynthesizer synthesizer)
+      : super(module, moduleToInstanceTypeMap, synthesizer,
+            SystemVeriogSynthModuleDefinition(module)) {
     _portsString = _verilogPorts();
     _moduleContentsString = _verilogModuleContents(moduleToInstanceTypeMap);
   }
@@ -153,7 +151,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 
   List<String> _verilogInputs() {
-    var declarations = _synthModuleDefinition.inputs
+    var declarations = synthModuleDefinition.inputs
         .map((sig) =>
             'input logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -161,7 +159,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 
   List<String> _verilogOutputs() {
-    var declarations = _synthModuleDefinition.outputs
+    var declarations = synthModuleDefinition.outputs
         .map((sig) =>
             'output logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -170,7 +168,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   String _verilogInternalNets() {
     var declarations = [];
-    for (var sig in _synthModuleDefinition.internalNets) {
+    for (var sig in synthModuleDefinition.internalNets) {
       if (sig.needsDeclaration) {
         declarations.add(
             'logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)};');
@@ -194,7 +192,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   String _verilogAssignments() {
     var assignmentLines = [];
-    for (var assignment in _synthModuleDefinition.assignments) {
+    for (var assignment in synthModuleDefinition.assignments) {
       var srcName = '';
 
       assignmentLines
@@ -203,32 +201,11 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
     return assignmentLines.join('\n');
   }
 
-  String _verilogSubModuleInstantiations(
-      Map<Module, String> moduleToInstanceTypeMap) {
-    var subModuleLines = <String>[];
-    for (var subModuleInstantiation
-        in _synthModuleDefinition.moduleToSubModuleInstantiationMap.values) {
-      if (SystemVerilogSynthesizer()
-              .generatesDefinition(subModuleInstantiation.module) &&
-          !moduleToInstanceTypeMap.containsKey(subModuleInstantiation.module)) {
-        throw Exception('No defined instance type found.');
-      }
-      var instanceType =
-          moduleToInstanceTypeMap[subModuleInstantiation.module] ?? '*NONE*';
-      var instantiationVerilog =
-          subModuleInstantiation.instantiationCode(instanceType);
-      if (instantiationVerilog != null) {
-        subModuleLines.add(instantiationVerilog);
-      }
-    }
-    return subModuleLines.join('\n');
-  }
-
   String _verilogModuleContents(Map<Module, String> moduleToInstanceTypeMap) {
     return [
       _verilogInternalNets(),
       _verilogAssignments(),
-      _verilogSubModuleInstantiations(moduleToInstanceTypeMap),
+      subModuleInstantiations(moduleToInstanceTypeMap),
     ].join('\n');
   }
 
