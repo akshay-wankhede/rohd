@@ -59,10 +59,11 @@ class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
     assert(outputs.length == 1);
     var aName = inputs[_a]!;
     var outName = outputs[_out]!;
-    var negativeOneName = CustomCIRCT.nextTempName();
+    var neg1 = CustomCIRCT.nextTempName();
     return [
-      '%$negativeOneName = hw.constant -1 : i${a.width}',
-      '%$outName = comb.xor %$aName, %$negativeOneName : i${out.width}'
+      '// $instanceName',
+      '%$neg1 = hw.constant -1 : i${a.width}',
+      '%$outName = comb.xor %$aName, %$neg1 : i${out.width}'
     ].join('\n');
   }
 }
@@ -70,7 +71,8 @@ class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
 /// A generic unary gate [Module].
 ///
 /// It always takes one input, and the output width is always 1.
-class _OneInputUnaryGate extends Module with InlineSystemVerilog {
+abstract class _OneInputUnaryGate extends Module
+    with InlineSystemVerilog, CustomCIRCT {
   /// Name for a port of this module.
   late final String _a, _y;
 
@@ -81,14 +83,14 @@ class _OneInputUnaryGate extends Module with InlineSystemVerilog {
   Logic get y => output(_y);
 
   final LogicValue Function(LogicValues a) _op;
-  final String _opStr;
+  final String _svOpStr;
 
   /// Constructs a unary gate for an abitrary custom functional implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When this
-  /// [Module] is in-lined as SystemVerilog, it will use [_opStr] as the prefix to the
-  /// input signal name (e.g. if [_opStr] was "&", generated SystemVerilog may look like "&a").
-  _OneInputUnaryGate(this._op, this._opStr, Logic a, {String name = 'ugate'})
+  /// [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as the prefix to the
+  /// input signal name (e.g. if [_svOpStr] was "&", generated SystemVerilog may look like "&a").
+  _OneInputUnaryGate(this._op, this._svOpStr, Logic a, {String name = 'ugate'})
       : super(name: name) {
     _a = Module.unpreferredName(a.name);
     _y = Module.unpreferredName(name + '_' + a.name);
@@ -114,14 +116,30 @@ class _OneInputUnaryGate extends Module with InlineSystemVerilog {
   String inlineVerilog(Map<String, String> inputs) {
     if (inputs.length != 1) throw Exception('Gate has exactly one input.');
     var a = inputs[_a]!;
-    return '$_opStr$a';
+    return '$_svOpStr$a';
   }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 1);
+    assert(outputs.length == 1);
+    var aName = inputs[_a]!;
+    var yName = outputs[_y]!;
+    return [
+      '// $instanceName',
+      _generateCIRCT(aName, yName),
+    ].join('\n');
+  }
+
+  String _generateCIRCT(String aName, String yName);
 }
 
 /// A generic two-input bitwise gate [Module].
 ///
 /// It always takes two inputs and has one output.  All ports have the same width.
-abstract class _TwoInputBitwiseGate extends Module with InlineSystemVerilog {
+abstract class _TwoInputBitwiseGate extends Module
+    with InlineSystemVerilog, CustomCIRCT {
   /// Name for a port of this module.
   late final String _a, _b, _y;
 
@@ -135,14 +153,16 @@ abstract class _TwoInputBitwiseGate extends Module with InlineSystemVerilog {
   Logic get y => output(_y);
 
   final LogicValues Function(LogicValues a, LogicValues b) _op;
-  final String _opStr;
+  final String _svOpStr;
+  final String _circtOpStr;
 
   /// Constructs a two-input bitwise gate for an abitrary custom functional implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When this
-  /// [Module] is in-lined as SystemVerilog, it will use [_opStr] as a String between the two input
-  /// signal names (e.g. if [_opStr] was "&", generated SystemVerilog may look like "a & b").
-  _TwoInputBitwiseGate(this._op, this._opStr, Logic a, dynamic b,
+  /// [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as a String between the two input
+  /// signal names (e.g. if [_svOpStr] was "&", generated SystemVerilog may look like "a & b").
+  _TwoInputBitwiseGate(
+      this._op, this._svOpStr, this._circtOpStr, Logic a, dynamic b,
       {String name = 'gate2'})
       : super(name: name) {
     if (b is Logic && a.width != b.width) {
@@ -191,14 +211,29 @@ abstract class _TwoInputBitwiseGate extends Module with InlineSystemVerilog {
     if (inputs.length != 2) throw Exception('Gate has exactly two inputs.');
     var a = inputs[_a]!;
     var b = inputs[_b]!;
-    return '$a $_opStr $b';
+    return '$a $_svOpStr $b';
+  }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 2);
+    assert(outputs.length == 1);
+    var aName = inputs[_a]!;
+    var bName = inputs[_b]!;
+    var yName = outputs[_y]!;
+    return [
+      '// $instanceName',
+      '%$yName = comb.$_circtOpStr %$aName, %$bName : i${y.width}'
+    ].join('\n');
   }
 }
 
 /// A generic two-input comparison gate [Module].
 ///
 /// It always takes two inputs of the same width and has one 1-bit output.
-abstract class _TwoInputComparisonGate extends Module with InlineSystemVerilog {
+abstract class _TwoInputComparisonGate extends Module
+    with InlineSystemVerilog, CustomCIRCT {
   late final String _a, _b, _y;
 
   /// An input to this gate.
@@ -211,14 +246,16 @@ abstract class _TwoInputComparisonGate extends Module with InlineSystemVerilog {
   Logic get y => output(_y);
 
   final LogicValue Function(LogicValues a, LogicValues b) _op;
-  final String _opStr;
+  final String _svOpStr;
+  final String _circtOpStr;
 
   /// Constructs a two-input comparison gate for an abitrary custom functional implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When this
-  /// [Module] is in-lined as SystemVerilog, it will use [_opStr] as a String between the two input
-  /// signal names (e.g. if [_opStr] was ">", generated SystemVerilog may look like "a > b").
-  _TwoInputComparisonGate(this._op, this._opStr, Logic a, dynamic b,
+  /// [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as a String between the two input
+  /// signal names (e.g. if [_svOpStr] was ">", generated SystemVerilog may look like "a > b").
+  _TwoInputComparisonGate(
+      this._op, this._svOpStr, this._circtOpStr, Logic a, dynamic b,
       {String name = 'cmp2'})
       : super(name: name) {
     if (b is Logic && a.width != b.width) {
@@ -260,7 +297,21 @@ abstract class _TwoInputComparisonGate extends Module with InlineSystemVerilog {
     if (inputs.length != 2) throw Exception('Gate has exactly two inputs.');
     var a = inputs[_a]!;
     var b = inputs[_b]!;
-    return '$a $_opStr $b';
+    return '$a $_svOpStr $b';
+  }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 2);
+    assert(outputs.length == 1);
+    var aName = inputs[_a]!;
+    var bName = inputs[_b]!;
+    var yName = outputs[_y]!;
+    return [
+      '// $instanceName',
+      '%$yName = comb.icmp $_circtOpStr %$aName, %$bName : i${y.width}'
+    ].join('\n');
   }
 }
 
@@ -280,7 +331,7 @@ class _ShiftGate extends Module with InlineSystemVerilog {
   Logic get y => output(_y);
 
   final LogicValues Function(LogicValues a, LogicValues b) _op;
-  final String _opStr;
+  final String _svOpStr;
 
   /// Whether or not this gate operates on a signed number.
   final bool signed;
@@ -288,9 +339,9 @@ class _ShiftGate extends Module with InlineSystemVerilog {
   /// Constructs a two-input shift gate for an abitrary custom functional implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When this
-  /// [Module] is in-lined as SystemVerilog, it will use [_opStr] as a String between the two input
-  /// signal names (e.g. if [_opStr] was ">>", generated SystemVerilog may look like "a >> b").
-  _ShiftGate(this._op, this._opStr, Logic a, dynamic b,
+  /// [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as a String between the two input
+  /// signal names (e.g. if [_svOpStr] was ">>", generated SystemVerilog may look like "a >> b").
+  _ShiftGate(this._op, this._svOpStr, Logic a, dynamic b,
       {String name = 'gate2', this.signed = false})
       : super(name: name) {
     var bLogic = b is Logic ? b : Const(b, width: a.width);
@@ -328,26 +379,26 @@ class _ShiftGate extends Module with InlineSystemVerilog {
     var a = inputs[_a]!;
     var b = inputs[_b]!;
     var aStr = signed ? '\$signed($a)' : a;
-    return '$aStr $_opStr $b';
+    return '$aStr $_svOpStr $b';
   }
 }
 
 /// A two-input AND gate.
 class And2Gate extends _TwoInputBitwiseGate {
   And2Gate(Logic a, Logic b, {String name = 'and'})
-      : super((a, b) => a & b, '&', a, b, name: name);
+      : super((a, b) => a & b, '&', 'and', a, b, name: name);
 }
 
 /// A two-input OR gate.
 class Or2Gate extends _TwoInputBitwiseGate {
   Or2Gate(Logic a, Logic b, {String name = 'or'})
-      : super((a, b) => a | b, '|', a, b, name: name);
+      : super((a, b) => a | b, '|', 'or', a, b, name: name);
 }
 
 /// A two-input XOR gate.
 class Xor2Gate extends _TwoInputBitwiseGate {
   Xor2Gate(Logic a, Logic b, {String name = 'xor'})
-      : super((a, b) => a ^ b, '^', a, b, name: name);
+      : super((a, b) => a ^ b, '^', 'xor', a, b, name: name);
 }
 
 //TODO: allow math operations on different sized Logics, with optional overrideable output size
@@ -355,73 +406,96 @@ class Xor2Gate extends _TwoInputBitwiseGate {
 /// A two-input addition module.
 class Add extends _TwoInputBitwiseGate {
   Add(Logic a, dynamic b, {String name = 'add'})
-      : super((a, b) => a + b, '+', a, b, name: name);
+      : super((a, b) => a + b, '+', 'add', a, b, name: name);
 }
 
 /// A two-input subtraction module.
 class Subtract extends _TwoInputBitwiseGate {
   Subtract(Logic a, dynamic b, {String name = 'subtract'})
-      : super((a, b) => a - b, '-', a, b, name: name);
+      : super((a, b) => a - b, '-', 'sub', a, b, name: name);
 }
 
 /// A two-input multiplication module.
 class Multiply extends _TwoInputBitwiseGate {
   Multiply(Logic a, dynamic b, {String name = 'multiply'})
-      : super((a, b) => a * b, '*', a, b, name: name);
+      : super((a, b) => a * b, '*', 'mul', a, b, name: name);
 }
 
 /// A two-input divison module.
 class Divide extends _TwoInputBitwiseGate {
   Divide(Logic a, dynamic b, {String name = 'divide'})
-      : super((a, b) => a / b, '/', a, b, name: name);
+      : super((a, b) => a / b, '/', 'divu', a, b, name: name);
 }
 
 /// A two-input equality comparison module.
 class Equals extends _TwoInputComparisonGate {
   Equals(Logic a, dynamic b, {String name = 'equals'})
-      : super((a, b) => a.eq(b), '==', a, b, name: name);
+      : super((a, b) => a.eq(b), '==', 'eq', a, b, name: name);
 }
 
 /// A two-input comparison module for less-than.
 class LessThan extends _TwoInputComparisonGate {
   LessThan(Logic a, dynamic b, {String name = 'lessthan'})
-      : super((a, b) => a < b, '<', a, b, name: name);
+      : super((a, b) => a < b, '<', 'ult', a, b, name: name);
 }
 
 /// A two-input comparison module for greater-than.
 class GreaterThan extends _TwoInputComparisonGate {
   GreaterThan(Logic a, dynamic b, {String name = 'greaterthan'})
-      : super((a, b) => a > b, '>', a, b, name: name);
+      : super((a, b) => a > b, '>', 'ugt', a, b, name: name);
 }
 
 /// A two-input comparison module for less-than-or-equal-to.
 class LessThanOrEqual extends _TwoInputComparisonGate {
   LessThanOrEqual(Logic a, dynamic b, {String name = 'lessthanorequal'})
-      : super((a, b) => a <= b, '<=', a, b, name: name);
+      : super((a, b) => a <= b, '<=', 'ule', a, b, name: name);
 }
 
 /// A two-input comparison module for greater-than-or-equal-to.
 class GreaterThanOrEqual extends _TwoInputComparisonGate {
   GreaterThanOrEqual(Logic a, dynamic b, {String name = 'greaterthanorequal'})
-      : super((a, b) => a >= b, '>=', a, b, name: name);
+      : super((a, b) => a >= b, '>=', 'uge', a, b, name: name);
 }
 
 /// A unary AND gate.
 class AndUnary extends _OneInputUnaryGate {
   AndUnary(Logic a, {String name = 'uand'})
       : super((a) => a.and(), '&', a, name: name);
+
+  @override
+  String _generateCIRCT(String aName, String yName) {
+    var neg1 = CustomCIRCT.nextTempName();
+    return [
+      '%$neg1 = hw.constant -1 : i${a.width}',
+      '%$yName = comb.icmp eq %$aName, %$neg1 : i${y.width}'
+    ].join('\n');
+  }
 }
 
 /// A unary OR gate.
 class OrUnary extends _OneInputUnaryGate {
   OrUnary(Logic a, {String name = 'uor'})
       : super((a) => a.or(), '|', a, name: name);
+
+  @override
+  String _generateCIRCT(String aName, String yName) {
+    var zero = CustomCIRCT.nextTempName();
+    return [
+      '%$zero = hw.constant 0 : i${a.width}',
+      '%$yName = comb.icmp ne %$aName, %$zero : i${y.width}'
+    ].join('\n');
+  }
 }
 
 /// A unary XOR gate.
 class XorUnary extends _OneInputUnaryGate {
   XorUnary(Logic a, {String name = 'uxor'})
       : super((a) => a.xor(), '^', a, name: name);
+
+  @override
+  String _generateCIRCT(String aName, String yName) {
+    return '%$yName = comb.parity %$aName : i${y.width}';
+  }
 }
 
 /// A logical right-shift module.
