@@ -192,6 +192,8 @@ abstract class Module {
     module._parent = this;
   }
 
+  //TODO: make unpreferredName's show up as such in CIRCT generated stuff
+
   /// A prefix to add to the beginning of any port name that is "unpreferred".
   static String get _unpreferredPrefix => '_';
 

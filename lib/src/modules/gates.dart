@@ -318,7 +318,7 @@ abstract class _TwoInputComparisonGate extends Module
 /// A generic two-input shift gate [Module].
 ///
 /// It always takes two inputs and has one output of equal width to the primary of the input.
-class _ShiftGate extends Module with InlineSystemVerilog {
+class _ShiftGate extends Module with InlineSystemVerilog, CustomCIRCT {
   late final String _a, _b, _y;
 
   /// The primary input to this gate.
@@ -332,6 +332,7 @@ class _ShiftGate extends Module with InlineSystemVerilog {
 
   final LogicValues Function(LogicValues a, LogicValues b) _op;
   final String _svOpStr;
+  final String _circtOpStr;
 
   /// Whether or not this gate operates on a signed number.
   final bool signed;
@@ -341,7 +342,7 @@ class _ShiftGate extends Module with InlineSystemVerilog {
   /// The function [_op] is executed as the custom functional behavior.  When this
   /// [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as a String between the two input
   /// signal names (e.g. if [_svOpStr] was ">>", generated SystemVerilog may look like "a >> b").
-  _ShiftGate(this._op, this._svOpStr, Logic a, dynamic b,
+  _ShiftGate(this._op, this._svOpStr, this._circtOpStr, Logic a, dynamic b,
       {String name = 'gate2', this.signed = false})
       : super(name: name) {
     var bLogic = b is Logic ? b : Const(b, width: a.width);
@@ -380,6 +381,20 @@ class _ShiftGate extends Module with InlineSystemVerilog {
     var b = inputs[_b]!;
     var aStr = signed ? '\$signed($a)' : a;
     return '$aStr $_svOpStr $b';
+  }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 2);
+    assert(outputs.length == 1);
+    var aName = inputs[_a]!;
+    var bName = inputs[_b]!;
+    var yName = outputs[_y]!;
+    return [
+      '// $instanceName',
+      '%$yName = comb.$_circtOpStr %$aName, %$bName : i${y.width}'
+    ].join('\n');
   }
 }
 
@@ -503,7 +518,7 @@ class RShift extends _ShiftGate {
   RShift(Logic a, Logic shamt, {String name = 'rshift'})
       :
         // Note: >>> vs >> is backwards for SystemVerilog and Dart
-        super((a, shamt) => a >>> shamt, '>>', a, shamt, name: name);
+        super((a, shamt) => a >>> shamt, '>>', 'shru', a, shamt, name: name);
 }
 
 /// An arithmetic right-shift module.
@@ -511,21 +526,21 @@ class ARShift extends _ShiftGate {
   ARShift(Logic a, Logic shamt, {String name = 'arshift'})
       :
         // Note: >>> vs >> is backwards for SystemVerilog and Dart
-        super((a, shamt) => a >> shamt, '>>>', a, shamt,
+        super((a, shamt) => a >> shamt, '>>>', 'shrs', a, shamt,
             name: name, signed: true);
 }
 
 /// A logical left-shift module.
 class LShift extends _ShiftGate {
   LShift(Logic a, Logic shamt, {String name = 'lshift'})
-      : super((a, shamt) => a << shamt, '<<', a, shamt, name: name);
+      : super((a, shamt) => a << shamt, '<<', 'shl', a, shamt, name: name);
 }
 
 /// A mux (multiplexer) module.
 ///
 /// If [control] has value `1`, then [y] gets [d1].
 /// If [control] has value `0`, then [y] gets [d0].
-class Mux extends Module with InlineSystemVerilog {
+class Mux extends Module with InlineSystemVerilog, CustomCIRCT {
   late final String _control, _d0, _d1, _y;
 
   /// The control signal for this [Mux].
@@ -595,5 +610,20 @@ class Mux extends Module with InlineSystemVerilog {
     var d1 = inputs[_d1]!;
     var control = inputs[_control]!;
     return '$control ? $d1 : $d0';
+  }
+
+  @override
+  String instantiationCIRCT(String instanceType, String instanceName,
+      Map<String, String> inputs, Map<String, String> outputs) {
+    assert(inputs.length == 3);
+    assert(outputs.length == 1);
+    var controlName = inputs[_control]!;
+    var d0Name = inputs[_d0]!;
+    var d1Name = inputs[_d1]!;
+    var yName = outputs[_y]!;
+    return [
+      '// $instanceName',
+      '%$yName = comb.mux %$controlName %$d0Name, %$d1Name : i${y.width}'
+    ].join('\n');
   }
 }
