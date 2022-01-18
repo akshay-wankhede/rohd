@@ -8,6 +8,8 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'dart:io';
+
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 
@@ -19,6 +21,38 @@ class CIRCTSynthesizer extends Synthesizer {
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap) {
     return _CIRCTSynthesisResult(module, moduleToInstanceTypeMap, this);
+  }
+
+  static String convertCirctToSystemVerilog(String circtContents,
+      {required String circtBinPath, bool deleteTemporaryFiles = true}) {
+    var dir = 'tmp_circt';
+    var uniqueId = circtContents.hashCode;
+    var tmpCirctFile = '$dir/tmp_circt$uniqueId.mlir';
+    var tmpParsedCirctFile = '$dir/tmp_circt$uniqueId.out.mlir';
+
+    Directory(dir).createSync(recursive: true);
+    File(tmpCirctFile).writeAsStringSync(circtContents);
+
+    var circtOptExecutable = circtBinPath + '/circt-opt';
+
+    var circtResult = Process.runSync(circtOptExecutable,
+        ['-export-verilog', '-o=$tmpParsedCirctFile', tmpCirctFile]);
+
+    if (circtResult.exitCode != 0) {
+      print(circtResult.stdout);
+      print(circtResult.stderr);
+      throw Exception(
+          'Failed to export verilog from CIRCT, exit code: ${circtResult.exitCode}');
+    }
+
+    if (deleteTemporaryFiles) {
+      File(tmpCirctFile).deleteSync();
+      File(tmpParsedCirctFile).deleteSync();
+    }
+
+    var svCode = circtResult.stdout;
+
+    return svCode;
   }
 
   static String instantiationCIRCT(

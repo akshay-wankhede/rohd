@@ -115,6 +115,28 @@ class SimCompare {
     await Simulator.run();
   }
 
+  static List<bool> iverilogVectorMulti(
+    List<String> generatedVerilogs,
+    String topModule,
+    List<Vector> vectors, {
+    bool dontDeleteTmpFiles = false,
+    bool dumpWaves = false,
+    Map<String, int> signalToWidthMap = const {},
+    List<String> iverilogExtraArgs = const [],
+  }) {
+    return generatedVerilogs
+        .map((generatedVerilog) => iverilogVector(
+              generatedVerilog,
+              topModule,
+              vectors,
+              dontDeleteTmpFiles: dontDeleteTmpFiles,
+              dumpWaves: dumpWaves,
+              signalToWidthMap: signalToWidthMap,
+              iverilogExtraArgs: iverilogExtraArgs,
+            ))
+        .toList();
+  }
+
   static bool iverilogVector(
     String generatedVerilog,
     String topModule,
