@@ -17,8 +17,12 @@ class CirctMod extends Module with CustomCirct {
   }
 
   @override
-  String instantiationCirct(String instanceType, String instanceName,
-      Map<String, String> inputs, Map<String, String> outputs) {
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
     return 'none';
   }
 }

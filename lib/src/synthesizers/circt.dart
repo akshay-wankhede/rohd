@@ -23,6 +23,9 @@ class CirctSynthesizer extends Synthesizer {
     return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 
+  int _tempNameCounter = 0;
+  String nextTempName() => '${_tempNameCounter++}';
+
   static String convertCirctToSystemVerilog(String circtContents,
       {String? circtBinPath, bool deleteTemporaryFiles = true}) {
     var dir = 'tmp_circt';
@@ -57,39 +60,15 @@ class CirctSynthesizer extends Synthesizer {
 
     return svCode;
   }
+}
 
-  static String instantiationCirct(
-      Module module,
+mixin CustomCirct on Module implements CustomFunctionality {
+  String instantiationCirct(
       String instanceType,
       String instanceName,
       Map<String, String> inputs,
       Map<String, String> outputs,
-      Map<String, int> portWidths) {
-    if (module is CustomCirct) {
-      return module.instantiationCirct(
-          instanceType, instanceName, inputs, outputs);
-    } else if (module is CustomFunctionality) {
-      throw Exception('Module $module defines custom functionality but not'
-          'an implementation in CIRCT!');
-    }
-    //TODO: add a CIRCT verbatim for SystemVerilog available ones
-    var receiverStr = outputs.values.map((e) => '%$e').join(', ');
-    var inputStr = inputs.entries
-        .map((e) => '${e.key} %${e.value}: i${portWidths[e.key]}')
-        .join(', ');
-    var outputStr = outputs.keys.map((e) => '$e: ${portWidths[e]}');
-
-    return '$receiverStr = hw.instance "$instanceName"'
-        ' @$instanceType ($inputStr) -> ($outputStr)';
-  }
-}
-
-mixin CustomCirct on Module implements CustomFunctionality {
-  String instantiationCirct(String instanceType, String instanceName,
-      Map<String, String> inputs, Map<String, String> outputs);
-
-  static int _tempNameCounter = 0;
-  static String nextTempName() => '${_tempNameCounter++}';
+      CirctSynthesizer synthesizer);
 }
 
 class _CirctSynthesisResult extends SynthesisResult {
@@ -110,7 +89,8 @@ class _CirctSynthesisResult extends SynthesisResult {
             synthesizer,
             SynthModuleDefinition(module,
                 ssmiBuilder: (Module m, String instantiationName) =>
-                    CirctSynthSubModuleInstantiation(m, instantiationName))) {
+                    CirctSynthSubModuleInstantiation(
+                        m, instantiationName, synthesizer))) {
     _inputsString = _circtInputs();
     _outputsString = _circtOutputs();
     _outputsFooter = _circtOutputFooter();
@@ -201,7 +181,8 @@ class _CirctSynthesisResult extends SynthesisResult {
 }
 
 class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
-  CirctSynthSubModuleInstantiation(Module module, String name)
+  CirctSynthesizer synthesizer;
+  CirctSynthSubModuleInstantiation(Module module, String name, this.synthesizer)
       : super(module, name);
 
   @override
@@ -213,19 +194,17 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
     var constDefinitions = <String>[];
     for (var inputSynthLogic in inputMapping.keys) {
       if (inputSynthLogic.isConst) {
-        var constName = CustomCirct.nextTempName();
+        var constName = synthesizer.nextTempName();
         constDefinitions.add('%$constName = hw.constant '
-            '${inputSynthLogic.constant.toBigInt()} : i${inputSynthLogic.logic.width}');
+            '${inputSynthLogic.constant.toBigInt()} : '
+            'i${inputSynthLogic.logic.width}\n');
         constMap[inputSynthLogic] = constName;
       }
     }
 
-    return constDefinitions.join('\n') +
-        '\n' +
-        CirctSynthesizer.instantiationCirct(
-            module,
+    return constDefinitions.join() +
+        _instantiationCirct(
             instanceType,
-            name,
             inputMapping.map((synthLogic, logic) => MapEntry(
                 logic.name, // port name guaranteed to match
                 constMap[synthLogic] ?? synthLogic.name)),
@@ -234,5 +213,25 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
                 synthLogic.name)),
             Map.fromEntries([...inputMapping.values, ...outputMapping.values]
                 .map((e) => MapEntry(e.name, e.width))));
+  }
+
+  String _instantiationCirct(String instanceType, Map<String, String> inputs,
+      Map<String, String> outputs, Map<String, int> portWidths) {
+    if (module is CustomCirct) {
+      return (module as CustomCirct)
+          .instantiationCirct(instanceType, name, inputs, outputs, synthesizer);
+    } else if (module is CustomFunctionality) {
+      throw Exception('Module $module defines custom functionality but not'
+          'an implementation in CIRCT!');
+    }
+    //TODO: add a CIRCT verbatim for SystemVerilog available ones
+    var receiverStr = outputs.values.map((e) => '%$e').join(', ');
+    var inputStr = inputs.entries
+        .map((e) => '${e.key} %${e.value}: i${portWidths[e.key]}')
+        .join(', ');
+    var outputStr = outputs.keys.map((e) => '$e: ${portWidths[e]}');
+
+    return '$receiverStr = hw.instance "$name"'
+        ' @$instanceType ($inputStr) -> ($outputStr)';
   }
 }
