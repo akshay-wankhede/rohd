@@ -310,7 +310,7 @@ abstract class _TwoInputComparisonGate extends Module
     var yName = outputs[_y]!;
     return [
       '// $instanceName',
-      '%$yName = comb.icmp $_circtOpStr %$aName, %$bName : i${y.width}'
+      '%$yName = comb.icmp $_circtOpStr %$aName, %$bName : i${a.width}'
     ].join('\n');
   }
 }
@@ -482,7 +482,7 @@ class AndUnary extends _OneInputUnaryGate {
     var neg1 = CustomCIRCT.nextTempName();
     return [
       '%$neg1 = hw.constant -1 : i${a.width}',
-      '%$yName = comb.icmp eq %$aName, %$neg1 : i${y.width}'
+      '%$yName = comb.icmp eq %$aName, %$neg1 : i${a.width}'
     ].join('\n');
   }
 }
@@ -497,7 +497,7 @@ class OrUnary extends _OneInputUnaryGate {
     var zero = CustomCIRCT.nextTempName();
     return [
       '%$zero = hw.constant 0 : i${a.width}',
-      '%$yName = comb.icmp ne %$aName, %$zero : i${y.width}'
+      '%$yName = comb.icmp ne %$aName, %$zero : i${a.width}'
     ].join('\n');
   }
 }
@@ -509,7 +509,7 @@ class XorUnary extends _OneInputUnaryGate {
 
   @override
   String _generateCIRCT(String aName, String yName) {
-    return '%$yName = comb.parity %$aName : i${y.width}';
+    return '%$yName = comb.parity %$aName : i${a.width}';
   }
 }
 
