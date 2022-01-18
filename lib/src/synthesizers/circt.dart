@@ -24,7 +24,7 @@ class CIRCTSynthesizer extends Synthesizer {
   }
 
   static String convertCirctToSystemVerilog(String circtContents,
-      {required String circtBinPath, bool deleteTemporaryFiles = true}) {
+      {String? circtBinPath, bool deleteTemporaryFiles = true}) {
     var dir = 'tmp_circt';
     var uniqueId = circtContents.hashCode;
     var tmpCirctFile = '$dir/tmp_circt$uniqueId.mlir';
@@ -33,7 +33,10 @@ class CIRCTSynthesizer extends Synthesizer {
     Directory(dir).createSync(recursive: true);
     File(tmpCirctFile).writeAsStringSync(circtContents);
 
-    var circtOptExecutable = circtBinPath + '/circt-opt';
+    var circtOptExecutable = [
+      if (circtBinPath != null) circtBinPath,
+      'circt-opt',
+    ].join('/');
 
     var circtResult = Process.runSync(circtOptExecutable,
         ['-export-verilog', '-o=$tmpParsedCirctFile', tmpCirctFile]);

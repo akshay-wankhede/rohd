@@ -188,19 +188,13 @@ void main() {
         Vector({'a': 0}, {'a_bar': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors);
-      expect(simResult, equals(true));
 
       var simResults = SimCompare.iverilogVectorMulti([
-        // gtm.generateSynth(SystemVerilogSynthesizer()),
+        gtm.generateSynth(SystemVerilogSynthesizer()),
         CIRCTSynthesizer.convertCirctToSystemVerilog(
-            gtm.generateSynth(CIRCTSynthesizer()),
-            circtBinPath: '/home/max/work/circt/build/bin',
-            deleteTemporaryFiles: false)
-      ], gtm.runtimeType.toString(), vectors, dontDeleteTmpFiles: true);
+          gtm.generateSynth(CIRCTSynthesizer()),
+        )
+      ], gtm.runtimeType.toString(), vectors);
       for (var simResult in simResults) {
         expect(simResult, equals(true));
       }

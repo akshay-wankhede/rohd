@@ -49,7 +49,6 @@ void main() {
   test('simple gen', () async {
     var mod = CirctMod(Logic(), Logic());
     await mod.build();
-    var gen = mod.generateSynth(CIRCTSynthesizer());
-    print(gen);
+    mod.generateSynth(CIRCTSynthesizer());
   });
 }
