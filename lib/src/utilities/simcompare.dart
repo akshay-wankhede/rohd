@@ -152,8 +152,8 @@ class SimCompare {
       [
         module.generateSynth(SystemVerilogSynthesizer()),
         if (circtBinPath != null)
-          CIRCTSynthesizer.convertCirctToSystemVerilog(
-            module.generateSynth(CIRCTSynthesizer()),
+          CirctSynthesizer.convertCirctToSystemVerilog(
+            module.generateSynth(CirctSynthesizer()),
             circtBinPath: circtBinPath,
             deleteTemporaryFiles: !dontDeleteTmpFiles,
           ),

@@ -11,13 +11,13 @@
 import 'package:rohd/rohd.dart';
 import 'package:test/test.dart';
 
-class CIRCTMod extends Module with CustomCIRCT {
-  CIRCTMod(Logic a) {
+class CirctMod extends Module with CustomCirct {
+  CirctMod(Logic a) {
     a = addInput('a', a);
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     return 'none';
   }
@@ -26,7 +26,7 @@ class CIRCTMod extends Module with CustomCIRCT {
 class TopMod extends Module {
   TopMod(Logic a) {
     a = addInput('a', a);
-    CIRCTMod(a);
+    CirctMod(a);
   }
 }
 

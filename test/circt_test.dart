@@ -43,12 +43,12 @@ void main() {
   test('unsupported exception', () async {
     var mod = TopModSV(Logic());
     await mod.build();
-    expect(() => mod.generateSynth(CIRCTSynthesizer()), throwsException);
+    expect(() => mod.generateSynth(CirctSynthesizer()), throwsException);
   });
 
   test('simple gen', () async {
     var mod = CirctMod(Logic(), Logic());
     await mod.build();
-    mod.generateSynth(CIRCTSynthesizer());
+    mod.generateSynth(CirctSynthesizer());
   });
 }

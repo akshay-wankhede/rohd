@@ -13,14 +13,14 @@ import 'dart:io';
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 
-class CIRCTSynthesizer extends Synthesizer {
+class CirctSynthesizer extends Synthesizer {
   @override
   bool generatesDefinition(Module module) => module is! CustomFunctionality;
 
   @override
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap) {
-    return _CIRCTSynthesisResult(module, moduleToInstanceTypeMap, this);
+    return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 
   static String convertCirctToSystemVerilog(String circtContents,
@@ -58,15 +58,15 @@ class CIRCTSynthesizer extends Synthesizer {
     return svCode;
   }
 
-  static String instantiationCIRCT(
+  static String instantiationCirct(
       Module module,
       String instanceType,
       String instanceName,
       Map<String, String> inputs,
       Map<String, String> outputs,
       Map<String, int> portWidths) {
-    if (module is CustomCIRCT) {
-      return module.instantiationCIRCT(
+    if (module is CustomCirct) {
+      return module.instantiationCirct(
           instanceType, instanceName, inputs, outputs);
     } else if (module is CustomFunctionality) {
       throw Exception('Module $module defines custom functionality but not'
@@ -84,15 +84,15 @@ class CIRCTSynthesizer extends Synthesizer {
   }
 }
 
-mixin CustomCIRCT on Module implements CustomFunctionality {
-  String instantiationCIRCT(String instanceType, String instanceName,
+mixin CustomCirct on Module implements CustomFunctionality {
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs);
 
   static int _tempNameCounter = 0;
   static String nextTempName() => '${_tempNameCounter++}';
 }
 
-class _CIRCTSynthesisResult extends SynthesisResult {
+class _CirctSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated ports
   late final String _inputsString;
 
@@ -102,15 +102,15 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated contents of the module
   late final String _moduleContentsString;
 
-  _CIRCTSynthesisResult(Module module,
-      Map<Module, String> moduleToInstanceTypeMap, CIRCTSynthesizer synthesizer)
+  _CirctSynthesisResult(Module module,
+      Map<Module, String> moduleToInstanceTypeMap, CirctSynthesizer synthesizer)
       : super(
             module,
             moduleToInstanceTypeMap,
             synthesizer,
             SynthModuleDefinition(module,
                 ssmiBuilder: (Module m, String instantiationName) =>
-                    CIRCTSynthSubModuleInstantiation(m, instantiationName))) {
+                    CirctSynthSubModuleInstantiation(m, instantiationName))) {
     _inputsString = _circtInputs();
     _outputsString = _circtOutputs();
     _outputsFooter = _circtOutputFooter();
@@ -178,7 +178,7 @@ class _CIRCTSynthesisResult extends SynthesisResult {
 
   @override
   bool matchesImplementation(SynthesisResult other) =>
-      other is _CIRCTSynthesisResult &&
+      other is _CirctSynthesisResult &&
       other._inputsString == _inputsString &&
       other._outputsString == _outputsString &&
       other._outputsFooter == _outputsFooter &&
@@ -186,10 +186,10 @@ class _CIRCTSynthesisResult extends SynthesisResult {
 
   @override
   String toFileContents() {
-    return _toCIRCT(moduleToInstanceTypeMap);
+    return _toCirct(moduleToInstanceTypeMap);
   }
 
-  String _toCIRCT(Map<Module, String> moduleToInstanceTypeMap) {
+  String _toCirct(Map<Module, String> moduleToInstanceTypeMap) {
     var circtModuleName = moduleToInstanceTypeMap[module];
     return [
       'hw.module @$circtModuleName($_inputsString) -> ($_outputsString) {',
@@ -200,24 +200,39 @@ class _CIRCTSynthesisResult extends SynthesisResult {
   }
 }
 
-class CIRCTSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
-  CIRCTSynthSubModuleInstantiation(Module module, String name)
+class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
+  CirctSynthSubModuleInstantiation(Module module, String name)
       : super(module, name);
 
   @override
   String? instantiationCode(String instanceType) {
     if (!needsDeclaration) return null;
-    return CIRCTSynthesizer.instantiationCIRCT(
-        module,
-        instanceType,
-        name,
-        inputMapping.map((synthLogic, logic) => MapEntry(
-            logic.name, // port name guaranteed to match
-            synthLogic.name)),
-        outputMapping.map((synthLogic, logic) => MapEntry(
-            logic.name, // port name guaranteed to match
-            synthLogic.name)),
-        Map.fromEntries([...inputMapping.values, ...outputMapping.values]
-            .map((e) => MapEntry(e.name, e.width))));
+
+    // collect consts for CIRCT, since you can't in-line them
+    var constMap = <SynthLogic, String>{};
+    var constDefinitions = <String>[];
+    for (var inputSynthLogic in inputMapping.keys) {
+      if (inputSynthLogic.isConst) {
+        var constName = CustomCirct.nextTempName();
+        constDefinitions.add('%$constName = hw.constant '
+            '${inputSynthLogic.constant.toBigInt()} : i${inputSynthLogic.logic.width}');
+        constMap[inputSynthLogic] = constName;
+      }
+    }
+
+    return constDefinitions.join('\n') +
+        '\n' +
+        CirctSynthesizer.instantiationCirct(
+            module,
+            instanceType,
+            name,
+            inputMapping.map((synthLogic, logic) => MapEntry(
+                logic.name, // port name guaranteed to match
+                constMap[synthLogic] ?? synthLogic.name)),
+            outputMapping.map((synthLogic, logic) => MapEntry(
+                logic.name, // port name guaranteed to match
+                synthLogic.name)),
+            Map.fromEntries([...inputMapping.values, ...outputMapping.values]
+                .map((e) => MapEntry(e.name, e.width))));
   }
 }

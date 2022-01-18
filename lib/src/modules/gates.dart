@@ -8,10 +8,12 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'dart:math';
+
 import 'package:rohd/rohd.dart';
 
 /// A gate [Module] that performs bit-wise inversion.
-class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
+class NotGate extends Module with InlineSystemVerilog, CustomCirct {
   /// Name for a port of this module.
   late final String _a, _out;
 
@@ -53,13 +55,13 @@ class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 1);
     assert(outputs.length == 1);
     var aName = inputs[_a]!;
     var outName = outputs[_out]!;
-    var neg1 = CustomCIRCT.nextTempName();
+    var neg1 = CustomCirct.nextTempName();
     return [
       '// $instanceName',
       '%$neg1 = hw.constant -1 : i${a.width}',
@@ -72,7 +74,7 @@ class NotGate extends Module with InlineSystemVerilog, CustomCIRCT {
 ///
 /// It always takes one input, and the output width is always 1.
 abstract class _OneInputUnaryGate extends Module
-    with InlineSystemVerilog, CustomCIRCT {
+    with InlineSystemVerilog, CustomCirct {
   /// Name for a port of this module.
   late final String _a, _y;
 
@@ -120,7 +122,7 @@ abstract class _OneInputUnaryGate extends Module
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 1);
     assert(outputs.length == 1);
@@ -128,18 +130,18 @@ abstract class _OneInputUnaryGate extends Module
     var yName = outputs[_y]!;
     return [
       '// $instanceName',
-      _generateCIRCT(aName, yName),
+      _generateCirct(aName, yName),
     ].join('\n');
   }
 
-  String _generateCIRCT(String aName, String yName);
+  String _generateCirct(String aName, String yName);
 }
 
 /// A generic two-input bitwise gate [Module].
 ///
 /// It always takes two inputs and has one output.  All ports have the same width.
 abstract class _TwoInputBitwiseGate extends Module
-    with InlineSystemVerilog, CustomCIRCT {
+    with InlineSystemVerilog, CustomCirct {
   /// Name for a port of this module.
   late final String _a, _b, _y;
 
@@ -215,7 +217,7 @@ abstract class _TwoInputBitwiseGate extends Module
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 2);
     assert(outputs.length == 1);
@@ -233,7 +235,7 @@ abstract class _TwoInputBitwiseGate extends Module
 ///
 /// It always takes two inputs of the same width and has one 1-bit output.
 abstract class _TwoInputComparisonGate extends Module
-    with InlineSystemVerilog, CustomCIRCT {
+    with InlineSystemVerilog, CustomCirct {
   late final String _a, _b, _y;
 
   /// An input to this gate.
@@ -301,7 +303,7 @@ abstract class _TwoInputComparisonGate extends Module
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 2);
     assert(outputs.length == 1);
@@ -318,7 +320,7 @@ abstract class _TwoInputComparisonGate extends Module
 /// A generic two-input shift gate [Module].
 ///
 /// It always takes two inputs and has one output of equal width to the primary of the input.
-class _ShiftGate extends Module with InlineSystemVerilog, CustomCIRCT {
+class _ShiftGate extends Module with InlineSystemVerilog, CustomCirct {
   late final String _a, _b, _y;
 
   /// The primary input to this gate.
@@ -383,17 +385,64 @@ class _ShiftGate extends Module with InlineSystemVerilog, CustomCIRCT {
     return '$aStr $_svOpStr $b';
   }
 
+  List<String> _paddingCirct(
+      String newName, String originalName, Logic signal, int targetWidth) {
+    assert(signal.width <= targetWidth);
+
+    var lines = <String>[];
+    var paddingVar = CustomCirct.nextTempName();
+    var paddingWidth = targetWidth - signal.width;
+
+    if (signed) {
+      var signVar = CustomCirct.nextTempName();
+      lines.add(
+          '%$signVar = comb.extract %$originalName from ${signal.width - 1} :'
+          '(i${signal.width}) -> i1');
+      lines.add('%$paddingVar = comb.replicate %$signVar : '
+          '(i1) -> i$paddingWidth');
+    } else {
+      lines.add('%$paddingVar = hw.constant 0 : i$paddingWidth');
+    }
+
+    lines.add('%$newName = comb.concat %$paddingVar, %$originalName :'
+        ' i$paddingWidth, i${signal.width}');
+    return lines;
+  }
+
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 2);
     assert(outputs.length == 1);
+
     var aName = inputs[_a]!;
     var bName = inputs[_b]!;
+    var inputWidth = max(a.width, b.width);
+    var inputLines = <String>[];
+    var aWideName = aName, bWideName = bName;
+    if (a.width < inputWidth) {
+      aWideName = CustomCirct.nextTempName();
+      inputLines.addAll(_paddingCirct(aWideName, aName, a, inputWidth));
+    }
+    if (b.width < inputWidth) {
+      bWideName = CustomCirct.nextTempName();
+      inputLines.addAll(_paddingCirct(bWideName, bName, b, inputWidth));
+    }
+
     var yName = outputs[_y]!;
+    var yWideName = yName;
+    var outputLines = <String>[];
+    if (y.width < inputWidth) {
+      yWideName = CustomCirct.nextTempName();
+      outputLines.add('%$yName = comb.extract %$yWideName from 0 :'
+          ' (i$inputWidth) -> i${y.width}');
+    }
+
     return [
       '// $instanceName',
-      '%$yName = comb.$_circtOpStr %$aName, %$bName : i${y.width}'
+      ...inputLines,
+      '%$yWideName = comb.$_circtOpStr %$aWideName, %$bWideName : i$inputWidth',
+      ...outputLines,
     ].join('\n');
   }
 }
@@ -478,8 +527,8 @@ class AndUnary extends _OneInputUnaryGate {
       : super((a) => a.and(), '&', a, name: name);
 
   @override
-  String _generateCIRCT(String aName, String yName) {
-    var neg1 = CustomCIRCT.nextTempName();
+  String _generateCirct(String aName, String yName) {
+    var neg1 = CustomCirct.nextTempName();
     return [
       '%$neg1 = hw.constant -1 : i${a.width}',
       '%$yName = comb.icmp eq %$aName, %$neg1 : i${a.width}'
@@ -493,8 +542,8 @@ class OrUnary extends _OneInputUnaryGate {
       : super((a) => a.or(), '|', a, name: name);
 
   @override
-  String _generateCIRCT(String aName, String yName) {
-    var zero = CustomCIRCT.nextTempName();
+  String _generateCirct(String aName, String yName) {
+    var zero = CustomCirct.nextTempName();
     return [
       '%$zero = hw.constant 0 : i${a.width}',
       '%$yName = comb.icmp ne %$aName, %$zero : i${a.width}'
@@ -508,7 +557,7 @@ class XorUnary extends _OneInputUnaryGate {
       : super((a) => a.xor(), '^', a, name: name);
 
   @override
-  String _generateCIRCT(String aName, String yName) {
+  String _generateCirct(String aName, String yName) {
     return '%$yName = comb.parity %$aName : i${a.width}';
   }
 }
@@ -540,7 +589,7 @@ class LShift extends _ShiftGate {
 ///
 /// If [control] has value `1`, then [y] gets [d1].
 /// If [control] has value `0`, then [y] gets [d0].
-class Mux extends Module with InlineSystemVerilog, CustomCIRCT {
+class Mux extends Module with InlineSystemVerilog, CustomCirct {
   late final String _control, _d0, _d1, _y;
 
   /// The control signal for this [Mux].
@@ -613,7 +662,7 @@ class Mux extends Module with InlineSystemVerilog, CustomCIRCT {
   }
 
   @override
-  String instantiationCIRCT(String instanceType, String instanceName,
+  String instantiationCirct(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     assert(inputs.length == 3);
     assert(outputs.length == 1);
@@ -623,7 +672,7 @@ class Mux extends Module with InlineSystemVerilog, CustomCIRCT {
     var yName = outputs[_y]!;
     return [
       '// $instanceName',
-      '%$yName = comb.mux %$controlName %$d0Name, %$d1Name : i${y.width}'
+      '%$yName = comb.mux %$controlName, %$d1Name, %$d0Name : i${y.width}'
     ].join('\n');
   }
 }
