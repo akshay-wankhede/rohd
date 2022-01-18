@@ -188,16 +188,10 @@ void main() {
         Vector({'a': 0}, {'a_bar': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-
-      var simResults = SimCompare.iverilogVectorMulti([
-        gtm.generateSynth(SystemVerilogSynthesizer()),
-        CIRCTSynthesizer.convertCirctToSystemVerilog(
-          gtm.generateSynth(CIRCTSynthesizer()),
-        )
-      ], gtm.runtimeType.toString(), vectors);
-      for (var simResult in simResults) {
-        expect(simResult, equals(true));
-      }
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
+          dontDeleteTmpFiles: true);
+      expect(simResult, equals(true));
     });
 
     test('unary and', () async {
@@ -210,14 +204,22 @@ void main() {
         Vector({'a': bin('0001')}, {'a_and': 0}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
+      var simResults = SimCompare.iverilogVectorMulti(
+          [
+            gtm.generateSynth(SystemVerilogSynthesizer()),
+            CIRCTSynthesizer.convertCirctToSystemVerilog(
+              gtm.generateSynth(CIRCTSynthesizer()),
+            )
+          ],
           gtm.runtimeType.toString(),
           vectors,
           signalToWidthMap: {
             'a': 4,
           });
-      expect(simResult, equals(true));
+
+      for (var simResult in simResults) {
+        expect(simResult, equals(true));
+      }
     });
 
     test('unary or', () async {

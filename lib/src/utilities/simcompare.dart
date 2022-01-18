@@ -115,6 +115,58 @@ class SimCompare {
     await Simulator.run();
   }
 
+  static bool _shownCirctWarning = false;
+  static String? _foundCirctPath;
+  static String? _defaultCirctPath() {
+    if (_foundCirctPath != null) {
+      return _foundCirctPath;
+    }
+
+    var circtResult = Process.runSync('which', ['circt-opt']);
+    if (circtResult.exitCode != 0) {
+      if (!_shownCirctWarning) {
+        print('Warning: CIRCT not found on path.');
+        _shownCirctWarning = true;
+      }
+      return null;
+    } else {
+      _foundCirctPath = (circtResult.stdout as String).trim();
+      _foundCirctPath =
+          _foundCirctPath!.substring(0, _foundCirctPath!.lastIndexOf('/'));
+      return _foundCirctPath;
+    }
+  }
+
+  static bool iverilogVectorAll(
+    Module module,
+    String topModule,
+    List<Vector> vectors, {
+    bool dontDeleteTmpFiles = false,
+    bool dumpWaves = false,
+    Map<String, int> signalToWidthMap = const {},
+    List<String> iverilogExtraArgs = const [],
+    String? circtBinPath,
+  }) {
+    circtBinPath = circtBinPath ?? _defaultCirctPath();
+    return iverilogVectorMulti(
+      [
+        module.generateSynth(SystemVerilogSynthesizer()),
+        if (circtBinPath != null)
+          CIRCTSynthesizer.convertCirctToSystemVerilog(
+            module.generateSynth(CIRCTSynthesizer()),
+            circtBinPath: circtBinPath,
+            deleteTemporaryFiles: !dontDeleteTmpFiles,
+          ),
+      ],
+      topModule,
+      vectors,
+      dontDeleteTmpFiles: dontDeleteTmpFiles,
+      dumpWaves: dumpWaves,
+      signalToWidthMap: signalToWidthMap,
+      iverilogExtraArgs: iverilogExtraArgs,
+    ).fold(true, (a, b) => a & b);
+  }
+
   static List<bool> iverilogVectorMulti(
     List<String> generatedVerilogs,
     String topModule,
