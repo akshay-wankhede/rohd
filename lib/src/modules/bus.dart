@@ -14,7 +14,7 @@ import 'package:rohd/rohd.dart';
 ///
 /// The returned signal is inclusive of both the [startIndex] and [endIndex].
 /// The output [subset] will have width equal to `|endIndex - startIndex| + 1`.
-class BusSubset extends Module with InlineSystemVerilog {
+class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
   /// Name for a port of this module.
   late final String _original, _subset;
 
@@ -75,9 +75,51 @@ class BusSubset extends Module with InlineSystemVerilog {
       throw Exception('BusSubset has exactly one input, but saw $inputs.');
     }
     var a = inputs[_original]!;
-    var sliceString =
-        startIndex == endIndex ? '[$startIndex]' : '[$endIndex:$startIndex]';
-    return '$a$sliceString';
+    if (startIndex <= endIndex) {
+      var sliceString =
+          startIndex == endIndex ? '[$startIndex]' : '[$endIndex:$startIndex]';
+      return '$a$sliceString';
+    } else {
+      var bits = <String>[];
+      for (var i = endIndex; i <= startIndex; i++) {
+        bits.add('$a[$i]');
+      }
+      var bitsString = bits.join(', ');
+      return '{$bitsString}';
+    }
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    assert(inputs.length == 1);
+    assert(outputs.length == 1);
+    var originalName = inputs[_original];
+    var subsetName = outputs[_subset];
+
+    var lines = <String>['// $instanceName'];
+
+    if (startIndex < endIndex) {
+      lines.add('%$subsetName = comb.extract %$originalName from $startIndex :'
+          ' (i${original.width}) -> i${subset.width}');
+    } else {
+      var bitNames = <String>[];
+      for (var i = endIndex; i <= startIndex; i++) {
+        var bitName = synthesizer.nextTempName();
+        lines.add('%$bitName = comb.extract %$originalName from $i :'
+            '(i${original.width}) -> i1');
+        bitNames.add(bitName);
+      }
+      var bitsString = bitNames.map((e) => '%$e').join(', ');
+      var widthsString = bitNames.map((e) => 'i1').join(', ');
+      lines.add('%$subsetName = comb.concat $bitsString : $widthsString');
+    }
+
+    return lines.join('\n');
   }
 }
 
@@ -85,8 +127,9 @@ class BusSubset extends Module with InlineSystemVerilog {
 ///
 /// The concatenation occurs such that index 0 of [signals] is the *most* significant bit(s).
 ///
-/// You can use convenience functions [swizzle()] or [rswizzle()] to more easily use this [Module].
-class Swizzle extends Module with InlineSystemVerilog {
+/// You can use convenience functions [LogicSwizzle.swizzle] or [LogicSwizzle.rswizzle] to
+/// more easily use this [Module].
+class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
   final String _out = Module.unpreferredName('swizzled');
 
   /// The output port containing concatenated signals.
@@ -134,7 +177,31 @@ class Swizzle extends Module with InlineSystemVerilog {
       throw Exception('This swizzle has ${_swizzleInputs.length} inputs,'
           ' but saw $inputs with ${inputs.length} values.');
     }
-    var inputStr = _swizzleInputs.reversed.map((e) => inputs[e.name]).join(',');
+    var inputStr =
+        _swizzleInputs.reversed.map((e) => inputs[e.name]).join(', ');
     return '{$inputStr}';
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    assert(inputs.length == _swizzleInputs.length);
+    assert(outputs.length == 1);
+
+    var outputName = outputs[_out];
+
+    var bitsString =
+        _swizzleInputs.reversed.map((e) => '%${inputs[e.name]}').join(', ');
+    var widthsString =
+        _swizzleInputs.reversed.map((e) => 'i${e.width}').join(', ');
+
+    return [
+      '// $instanceName',
+      '%$outputName = comb.concat $bitsString : $widthsString'
+    ].join('\n');
   }
 }

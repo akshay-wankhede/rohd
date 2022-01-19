@@ -457,4 +457,7 @@ class Logic {
   Logic slice(int endIndex, int startIndex) {
     return BusSubset(this, startIndex, endIndex).subset;
   }
+
+  /// Returns a [Logic] which is the reversed version of `this`.
+  Logic get reversed => slice(0, width - 1);
 }

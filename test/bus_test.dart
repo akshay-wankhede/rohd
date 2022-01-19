@@ -16,6 +16,8 @@ class BusTestModule extends Module {
   Logic get aBar => output('a_bar');
   Logic get aAndB => output('a_and_b');
   Logic get aShrunk => output('a_shrunk');
+  Logic get aRevShrunk => output('a_revshrunk');
+  Logic get aReversed => output('a_reversed');
   Logic get aBJoined => output('a_b_joined');
   Logic get a1 => output('a1');
   Logic get aPlusB => output('a_plus_b');
@@ -33,6 +35,8 @@ class BusTestModule extends Module {
     var aBar = addOutput('a_bar', width: a.width);
     var aAndB = addOutput('a_and_b', width: a.width);
     var aShrunk = addOutput('a_shrunk', width: 3);
+    var aRevShrunk = addOutput('a_revshrunk', width: 3);
+    var aReversed = addOutput('a_reversed', width: a.width);
     var aBJoined = addOutput('a_b_joined', width: a.width + b.width);
     var aPlusB = addOutput('a_plus_b', width: a.width);
     var a1 = addOutput('a1');
@@ -40,7 +44,9 @@ class BusTestModule extends Module {
     aBar <= ~a;
     aAndB <= a & b;
     aShrunk <= a.slice(2, 0);
-    aBJoined <= Swizzle([b, a]).out;
+    aRevShrunk <= a.slice(0, 2);
+    aReversed <= a.reversed;
+    aBJoined <= [b, a].swizzle();
     a1 <= a[1];
     aPlusB <= a + b;
   }
@@ -137,6 +143,8 @@ void main() {
       'a_bar': 8,
       'a_and_b': 8,
       'a_shrunk': 3,
+      'a_revshrunk': 3,
+      'a_reversed': 8,
       'a_b_joined': 16,
       'a_plus_b': 8
     };
@@ -150,10 +158,8 @@ void main() {
         Vector({'a': 1}, {'a_bar': 0xfe}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -169,10 +175,8 @@ void main() {
         Vector({'a': 0xff, 'b': 0xaa}, {'a_and_b': 0xaa}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -184,12 +188,43 @@ void main() {
         Vector({'a': 0}, {'a_shrunk': 0}),
         Vector({'a': 0xff}, {'a_shrunk': bin('111')}),
         Vector({'a': 0xf5}, {'a_shrunk': 5}),
+        Vector({'a': 0xf1}, {'a_shrunk': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
+          signalToWidthMap: signalToWidthMap);
+      expect(simResult, equals(true));
+    });
+
+    test('Bus reversed shrunk', () async {
+      var gtm = BusTestModule(Logic(width: 8), Logic(width: 8));
+      await gtm.build();
+      var vectors = [
+        Vector({'a': 0}, {'a_revshrunk': 0}),
+        Vector({'a': 0xff}, {'a_revshrunk': bin('111')}),
+        Vector({'a': 0xf5}, {'a_revshrunk': 5}),
+        Vector({'a': 0xf1}, {'a_revshrunk': 4}),
+      ];
+      await SimCompare.checkFunctionalVector(gtm, vectors);
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
+          signalToWidthMap: signalToWidthMap);
+      expect(simResult, equals(true));
+    });
+
+    test('Bus reversed', () async {
+      var gtm = BusTestModule(Logic(width: 8), Logic(width: 8));
+      await gtm.build();
+      var vectors = [
+        Vector({'a': 0}, {'a_reversed': 0}),
+        Vector({'a': 0xff}, {'a_reversed': 0xff}),
+        Vector({'a': 0xf5}, {'a_reversed': 0xaf}),
+        Vector({'a': 0xf1}, {'a_reversed': 0x8f}),
+      ];
+      await SimCompare.checkFunctionalVector(gtm, vectors);
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -205,10 +240,8 @@ void main() {
         Vector({'a': 0xaa, 'b': 0x55}, {'a_b_joined': 0x55aa}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -222,10 +255,8 @@ void main() {
         Vector({'a': 0xf5}, {'a1': 0}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -241,10 +272,8 @@ void main() {
         Vector({'a': 6, 'b': 7}, {'a_plus_b': 13}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
