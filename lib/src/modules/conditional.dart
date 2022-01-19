@@ -17,7 +17,7 @@ import 'package:rohd/rohd.dart';
 // TODO: warnings for case statements not covering all cases
 
 /// Represents a block of logic, similar to `always` blocks in SystemVerilog.
-abstract class _Always extends Module with CustomSystemVerilog {
+abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
   /// A [List] of the [Conditional]s to execute.
   final List<Conditional> conditionals;
 
@@ -54,7 +54,7 @@ abstract class _Always extends Module with CustomSystemVerilog {
     }
   }
 
-  String _alwaysContents(Map<String, String> inputsNameMap,
+  String _verilogAlwaysContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
     var contents = '';
     for (var conditional in conditionals) {
@@ -65,27 +65,53 @@ abstract class _Always extends Module with CustomSystemVerilog {
     return contents;
   }
 
+  String _circtAlwaysContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator) {
+    return conditionals
+        .map((conditional) => conditional.circtContents(
+            inputsNameMap, outputsNameMap, assignOperator))
+        .join('\n');
+  }
+
   /// The "always" part of the `always` block when generating SystemVerilog.
   ///
   /// For example, `always_comb` or `always_ff`.
-  @protected
-  String alwaysVerilogStatement(Map<String, String> inputs);
+  String _verilogAlwaysStatement(Map<String, String> inputs);
 
   /// The assignment operator to use when generating SystemVerilog.
   ///
   /// For example `=` or `<=`.
-  @protected
-  String assignOperator();
+  String _verilogAssignOperator();
 
   @override
   String instantiationVerilog(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     var verilog = '';
     verilog += '//  $instanceName\n';
-    verilog += '${alwaysVerilogStatement(inputs)} begin\n';
-    verilog += _alwaysContents(inputs, outputs, assignOperator());
+    verilog += '${_verilogAlwaysStatement(inputs)} begin\n';
+    verilog +=
+        _verilogAlwaysContents(inputs, outputs, _verilogAssignOperator());
     verilog += 'end\n';
     return verilog;
+  }
+
+  String _circtAlwaysStatement(Map<String, String> inputs);
+
+  String _circtAssignOperator();
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    return [
+      '//  $instanceName',
+      '${_circtAlwaysStatement(inputs)} {',
+      _circtAlwaysContents(inputs, outputs, _circtAssignOperator()),
+      '}',
+    ].join('\n');
   }
 }
 
@@ -130,9 +156,16 @@ class Combinational extends _Always {
   }
 
   @override
-  String alwaysVerilogStatement(Map<String, String> inputs) => 'always_comb';
+  String _verilogAlwaysStatement(Map<String, String> inputs) => 'always_comb';
+
   @override
-  String assignOperator() => '=';
+  String _verilogAssignOperator() => '=';
+
+  @override
+  String _circtAlwaysStatement(Map<String, String> inputs) => 'sv.alwayscomb';
+
+  @override
+  String _circtAssignOperator() => 'sv.bpassign';
 }
 
 @Deprecated('Use Sequential instead')
@@ -277,14 +310,28 @@ class Sequential extends _Always {
   }
 
   @override
-  String alwaysVerilogStatement(Map<String, String> inputs) {
+  String _verilogAlwaysStatement(Map<String, String> inputs) {
     String triggers =
         _clks.map((clk) => 'posedge ${inputs[clk.name]}').join(' or ');
     return 'always_ff @($triggers)';
   }
 
   @override
-  String assignOperator() => '<=';
+  String _verilogAssignOperator() => '<=';
+
+  @override
+  String _circtAlwaysStatement(Map<String, String> inputs) {
+    if (_clks.length == 1) {
+      return 'sv.alwaysff(posedge %${inputs[_clks[0].name]})';
+    } else {
+      String triggers =
+          _clks.map((clk) => 'posedge ${inputs[clk.name]}').join(', ');
+      return 'sv.always $triggers';
+    }
+  }
+
+  @override
+  String _circtAssignOperator() => 'sv.passign';
 }
 
 /// Represents an some logical assignments or actions that will only happen under certain conditions.
@@ -370,6 +417,9 @@ abstract class Conditional {
   String verilogContents(int indent, Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator);
 
+  String circtContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator);
+
   /// Calculates an amount of padding to provie at the beginning of each new line based on [indent].
   static String calcPadding(int indent) => List.filled(indent, '  ').join();
 }
@@ -413,6 +463,15 @@ class ConditionalAssign extends Conditional {
     var driverName = inputsNameMap[driverInput(driver).name]!;
     var receiverName = outputsNameMap[receiverOutput(receiver).name]!;
     return '$padding$receiverName $assignOperator $driverName;';
+  }
+
+  @override
+  String circtContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator) {
+    var driverName = inputsNameMap[driverInput(driver).name]!;
+    var receiverName = outputsNameMap[receiverOutput(receiver).name]!;
+    var width = receiver.width;
+    return '$assignOperator %$receiverName, %$driverName : i$width';
   }
 }
 
@@ -615,6 +674,41 @@ ${subPadding}end
 
     return verilog;
   }
+
+  @override
+  String circtContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator) {
+    //TODO: support case vs. casez and priority & unique once CIRCT supports it
+    var expressionName = inputsNameMap[driverInput(expression).name];
+    var lines = <String>[
+      'sv.casez %$expressionName : ${expression.width}',
+    ];
+    for (var item in items) {
+      var conditionName = inputsNameMap[driverInput(item.value).name];
+      var caseContents = item.then
+          .map((conditional) => conditional.circtContents(
+              inputsNameMap, outputsNameMap, assignOperator))
+          .join('\n');
+      lines.addAll([
+        'case %$conditionName: {',
+        caseContents,
+        '}',
+      ]);
+
+      if (defaultItem != null) {
+        var defaultCaseContents = defaultItem!
+            .map((conditional) => conditional.circtContents(
+                inputsNameMap, outputsNameMap, assignOperator))
+            .join('\n');
+        lines.addAll([
+          'default: {',
+          defaultCaseContents,
+          '}',
+        ]);
+      }
+    }
+    return lines.join('\n');
+  }
 }
 
 /// A special version of [Case] which can do wildcard matching via `z` in the expression.
@@ -778,6 +872,10 @@ ${padding}end ''';
 
     return verilog;
   }
+
+  @override
+  String circtContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator) {}
 }
 
 /// Represents a block of code to be conditionally executed, like `if`/`else`.
