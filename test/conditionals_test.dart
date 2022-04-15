@@ -40,7 +40,10 @@ class CaseModule extends Module {
       Case(
           [b, a].swizzle(),
           [
-            CaseItem(Const(LogicValues.fromString('01')), [c < 1, d < 0]),
+            CaseItem(Const(LogicValues.fromString('01')), [
+              c < 1,
+              d < 0,
+            ]),
             CaseItem(Const(LogicValues.fromString('10')), [
               c < 1,
               d < 0,
@@ -207,10 +210,9 @@ void main() {
         Vector({'a': 1, 'b': 1}, {'c': 0, 'd': 1, 'e': 1}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(SystemVerilogSynthesizer()),
-          mod.runtimeType.toString(),
-          vectors);
+      var simResult = SimCompare.iverilogVectorAll(
+          mod, mod.runtimeType.toString(), vectors,
+          dontDeleteTmpFiles: true);
       expect(simResult, equals(true));
     });
 

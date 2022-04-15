@@ -681,7 +681,7 @@ ${subPadding}end
     //TODO: support case vs. casez and priority & unique once CIRCT supports it
     var expressionName = inputsNameMap[driverInput(expression).name];
     var lines = <String>[
-      'sv.casez %$expressionName : ${expression.width}',
+      'sv.casez %$expressionName : i${expression.width}',
     ];
     for (var item in items) {
       var conditionName = inputsNameMap[driverInput(item.value).name];
@@ -694,18 +694,17 @@ ${subPadding}end
         caseContents,
         '}',
       ]);
-
-      if (defaultItem != null) {
-        var defaultCaseContents = defaultItem!
-            .map((conditional) => conditional.circtContents(
-                inputsNameMap, outputsNameMap, assignOperator))
-            .join('\n');
-        lines.addAll([
-          'default: {',
-          defaultCaseContents,
-          '}',
-        ]);
-      }
+    }
+    if (defaultItem != null) {
+      var defaultCaseContents = defaultItem!
+          .map((conditional) => conditional.circtContents(
+              inputsNameMap, outputsNameMap, assignOperator))
+          .join('\n');
+      lines.addAll([
+        'default: {',
+        defaultCaseContents,
+        '}',
+      ]);
     }
     return lines.join('\n');
   }
@@ -875,7 +874,10 @@ ${padding}end ''';
 
   @override
   String circtContents(Map<String, String> inputsNameMap,
-      Map<String, String> outputsNameMap, String assignOperator) {}
+      Map<String, String> outputsNameMap, String assignOperator) {
+    // TODO: implement circtContents
+    throw UnimplementedError();
+  }
 }
 
 /// Represents a block of code to be conditionally executed, like `if`/`else`.
@@ -962,6 +964,13 @@ ${padding}end ''';
     verilog += '\n';
 
     return verilog;
+  }
+
+  @override
+  String circtContents(Map<String, String> inputsNameMap,
+      Map<String, String> outputsNameMap, String assignOperator) {
+    // TODO: implement circtContents
+    throw UnimplementedError();
   }
 }
 
