@@ -8,7 +8,7 @@ class SynthLogic {
   bool get renameable => _mergedNameSynthLogic?.renameable ?? _renameable;
   bool _needsDeclaration = true;
   SynthLogic? _mergedNameSynthLogic;
-  LogicValues? _mergedConst;
+  LogicValue? _mergedConst;
   bool get needsDeclaration => _needsDeclaration;
   bool get isConst => _mergedNameSynthLogic?.isConst ?? _mergedConst != null;
   String get name {
@@ -18,7 +18,7 @@ class SynthLogic {
     return _mergedNameSynthLogic?.name ?? _name;
   }
 
-  LogicValues get constant {
+  LogicValue get constant {
     if (!isConst) {
       throw Exception('SynthLogic is not a constant, use name instead!');
     }
@@ -29,8 +29,8 @@ class SynthLogic {
       : _renameable = renameable,
         _mergedConst = logic is Const ? logic.value : null;
 
-  SynthLogic.ofConstant(LogicValues constant)
-      : logic = Const(constant, width: constant.length),
+  SynthLogic.ofConstant(LogicValue constant)
+      : logic = Const(constant, width: constant.width),
         _name = 'constant#$constant',
         _renameable = false,
         _mergedConst = constant;
@@ -57,7 +57,7 @@ class SynthLogic {
     _needsDeclaration = false;
   }
 
-  void mergeConst(LogicValues constant) {
+  void mergeConst(LogicValue constant) {
     // print("Renaming $name to const ${constant}");
     if (!renameable) {
       throw Exception(

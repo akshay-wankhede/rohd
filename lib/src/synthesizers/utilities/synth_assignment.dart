@@ -1,4 +1,3 @@
-import 'package:rohd/rohd.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 
 class SynthAssignment {

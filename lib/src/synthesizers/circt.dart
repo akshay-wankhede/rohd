@@ -101,7 +101,7 @@ class _CirctSynthesisResult extends SynthesisResult {
     if (synthLogic.isConst) {
       var constant = synthLogic.constant;
       if (constant.isValid) {
-        return 'hw.constant ${constant.toInt()} : i${constant.length}';
+        return 'hw.constant ${constant.toInt()} : i${constant.width}';
       } else {
         //TODO: handle CIRCT invalid constants
         throw UnimplementedError(

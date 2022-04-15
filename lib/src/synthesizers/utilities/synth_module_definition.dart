@@ -38,19 +38,19 @@ class SynthModuleDefinition {
     return "module name: '${module.name}'";
   }
 
-  late final Uniquifier SynthLogicNameUniquifier;
+  late final Uniquifier synthLogicNameUniquifier;
   String _getUniqueSynthLogicName(String? initialName, bool portName) {
     if (portName && initialName == null) {
       throw Exception('Port name cannot be null.');
     }
-    return SynthLogicNameUniquifier.getUniqueName(
+    return synthLogicNameUniquifier.getUniqueName(
         initialName: initialName, reserved: portName);
   }
 
-  final Uniquifier SynthSubModuleInstantiationNameUniquifier = Uniquifier();
+  final Uniquifier synthSubModuleInstantiationNameUniquifier = Uniquifier();
   String _getUniqueSynthSubModuleInstantiationName(
       String? initialName, bool reserved) {
-    return SynthSubModuleInstantiationNameUniquifier.getUniqueName(
+    return synthSubModuleInstantiationNameUniquifier.getUniqueName(
         initialName: initialName, nullStarter: 'm', reserved: reserved);
   }
 
@@ -69,7 +69,7 @@ class SynthModuleDefinition {
   }
 
   SynthModuleDefinition(this.module, {required this.ssmiBuilder}) {
-    SynthLogicNameUniquifier = Uniquifier(
+    synthLogicNameUniquifier = Uniquifier(
         reservedNames: {...module.inputs.keys, ...module.outputs.keys});
 
     // start by traversing output signals

@@ -38,19 +38,21 @@ void main() {
     test('respected with no conflicts', () async {
       var mod = SpeciallyNamedModule(Logic(), false, false);
       await mod.build();
-      expect(mod.generateSynth(), contains('module specialName('));
+      expect(mod.generateSynth(SystemVerilogSynthesizer()),
+          contains('module specialName('));
     });
     test('uniquified with conflicts', () async {
       var mod = TopModule(Logic(), false, false);
       await mod.build();
-      var sv = mod.generateSynth();
+      var sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(sv, contains('module specialName('));
       expect(sv, contains('module specialName_0('));
     });
     test('reserved throws exception with conflicts', () async {
       var mod = TopModule(Logic(), true, false);
       await mod.build();
-      expect(() => mod.generateSynth(), throwsException);
+      expect(
+          () => mod.generateSynth(SystemVerilogSynthesizer()), throwsException);
     });
   });
 
@@ -58,7 +60,7 @@ void main() {
     test('uniquified with conflicts', () async {
       var mod = TopModule(Logic(), false, false);
       await mod.build();
-      var sv = mod.generateSynth();
+      var sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(sv, contains('specialNameInstance('));
       expect(sv, contains('specialNameInstance_0('));
     });

@@ -82,7 +82,7 @@ Future<void> main({bool noPrint = false}) async {
   await firFilter.build();
 
   // Generate systemverilog code to file
-  var systemVerilogCode = firFilter.generateSynth();
+  var systemVerilogCode = firFilter.generateSynth(SystemVerilogSynthesizer());
   if (!noPrint) {
     // Print systemverilog code to console
     print(systemVerilogCode);

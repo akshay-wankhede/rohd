@@ -180,11 +180,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   static String _srcName(SynthLogic src) {
     if (src.isConst) {
       var constant = src.constant;
-      if (constant.isValid) {
-        return constant.toInt().toString();
-      } else {
-        return constant.toString();
-      }
+      return constant.toString();
     } else {
       return src.name;
     }
@@ -193,8 +189,6 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   String _verilogAssignments() {
     var assignmentLines = [];
     for (var assignment in synthModuleDefinition.assignments) {
-      var srcName = '';
-
       assignmentLines
           .add('assign ${assignment.dst.name} = ${_srcName(assignment.src)};');
     }
