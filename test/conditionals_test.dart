@@ -12,8 +12,6 @@ import 'package:rohd/rohd.dart';
 import 'package:test/test.dart';
 import 'package:rohd/src/utilities/simcompare.dart';
 
-// TODO: ensure no multiple drivers on ff allowed (illegal in SV and makes no sense) [implemented, but add a test]
-
 class LoopyCombModule extends Module {
   Logic get a => input('a');
   Logic get x => output('x');
@@ -40,11 +38,11 @@ class CaseModule extends Module {
       Case(
           [b, a].swizzle(),
           [
-            CaseItem(Const(LogicValues.fromString('01')), [
+            CaseItem(Const(LogicValue.ofString('01')), [
               c < 1,
               d < 0,
             ]),
-            CaseItem(Const(LogicValues.fromString('10')), [
+            CaseItem(Const(LogicValue.ofString('10')), [
               c < 1,
               d < 0,
             ]),
@@ -57,7 +55,7 @@ class CaseModule extends Module {
       CaseZ(
           [b, a].rswizzle(),
           [
-            CaseItem(Const(LogicValues.fromString('1z')), [
+            CaseItem(Const(LogicValue.ofString('1z')), [
               e < 1,
             ])
           ],
@@ -158,7 +156,7 @@ void main() {
       var mod = LoopyCombModule(Logic());
       await mod.build();
       mod.a.put(1);
-      expect(mod.x.valueInt, equals(0));
+      expect(mod.x.value.toInt(), equals(0));
     });
   });
 

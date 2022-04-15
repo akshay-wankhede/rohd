@@ -42,8 +42,6 @@ class Simulator {
   /// If set to -1 (the default), it means there is no maximum time limit.
   static int _maxSimTime = -1;
 
-  //TODO: use logger more, with hierarchy prints, and clean up exceptions where necessary
-
   /// A global logger object for the [Simulator].
   static final Logger logger = Logger('ROHD');
 
@@ -208,6 +206,11 @@ class Simulator {
   /// Starts the simulation, executing all pending actions in time-order until
   /// it finishes or is stopped.
   static Future<void> run() async {
+    if (simulationHasEnded) {
+      throw Exception('Simulation has already been run and ended.'
+          '  To run a new simulation, use Simulator.reset().');
+    }
+
     while (hasStepsRemaining() &&
         !_simulationEndRequested &&
         (_maxSimTime < 0 || _currentTimestamp < _maxSimTime)) {

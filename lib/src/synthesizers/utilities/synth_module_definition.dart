@@ -25,8 +25,8 @@ class SynthModuleDefinition {
       return moduleToSubModuleInstantiationMap[m]!;
     } else {
       SynthSubModuleInstantiation newSSMI;
-      var instantiationName =
-          _getUniqueSynthSubModuleInstantiationName(m.uniqueInstanceName);
+      var instantiationName = _getUniqueSynthSubModuleInstantiationName(
+          m.uniqueInstanceName, m.reserveName);
       newSSMI = ssmiBuilder(m, instantiationName);
       moduleToSubModuleInstantiationMap[m] = newSSMI;
       return newSSMI;
@@ -48,9 +48,10 @@ class SynthModuleDefinition {
   }
 
   final Uniquifier SynthSubModuleInstantiationNameUniquifier = Uniquifier();
-  String _getUniqueSynthSubModuleInstantiationName(String? initialName) {
+  String _getUniqueSynthSubModuleInstantiationName(
+      String? initialName, bool reserved) {
     return SynthSubModuleInstantiationNameUniquifier.getUniqueName(
-        initialName: initialName, nullStarter: 'm');
+        initialName: initialName, nullStarter: 'm', reserved: reserved);
   }
 
   SynthLogic? _getSynthLogic(Logic? logic, bool allowPortName) {

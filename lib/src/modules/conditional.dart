@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2022 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// conditional.dart
@@ -10,11 +10,8 @@
 
 import 'package:meta/meta.dart';
 import 'package:rohd/rohd.dart';
-
-// TODO: consider X optimism in conditional statements in more detail, dont be too pessimistic if both inputs are equal
-//  also need to add more tests around this (including @posedge(clk|reset))
-
-// TODO: warnings for case statements not covering all cases
+import 'package:rohd/src/utilities/sanitizer.dart';
+import 'package:rohd/src/utilities/uniquifier.dart';
 
 /// Represents a block of logic, similar to `always` blocks in SystemVerilog.
 abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
@@ -24,15 +21,17 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
   final Map<Logic, Logic> _assignedReceiverToOutputMap = {};
   final Map<Logic, Logic> _assignedDriverToInputMap = {};
 
-  _Always(this.conditionals, {String name = 'always'}) : super(name: name) {
-    //TODO: need to do some check that the same conditional is not used multiple times in the same always or in different always
+  final Uniquifier _portUniquifier = Uniquifier();
 
+  _Always(this.conditionals, {String name = 'always'}) : super(name: name) {
     // create a registration of all inputs and outputs of this module
     var idx = 0;
     for (var conditional in conditionals) {
       for (var driver in conditional.getDrivers()) {
         if (!_assignedDriverToInputMap.containsKey(driver)) {
-          var inputName = Module.unpreferredName('in$idx');
+          var inputName = _portUniquifier.getUniqueName(
+              initialName: Module.unpreferredName(
+                  Sanitizer.sanitizeSV('in${idx}_${driver.name}')));
           addInput(inputName, driver, width: driver.width);
           _assignedDriverToInputMap[driver] = input(inputName);
           idx++;
@@ -40,7 +39,9 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
       }
       for (var receiver in conditional.getReceivers()) {
         if (!_assignedReceiverToOutputMap.containsKey(receiver)) {
-          var outputName = Module.unpreferredName('out$idx');
+          var outputName = _portUniquifier.getUniqueName(
+              initialName: Module.unpreferredName(
+                  Sanitizer.sanitizeSV('out${idx}_${receiver.name}')));
           addOutput(outputName, width: receiver.width);
           _assignedReceiverToOutputMap[receiver] = output(outputName);
           receiver <= output(outputName);
@@ -143,7 +144,6 @@ class Combinational extends _Always {
     _isExecuting = true;
 
     // combinational must always drive all outputs or else you get X!
-    //TODO: could be more efficient if we only put X's on non-driven outputs (based on execute return)
     for (var element in _assignedReceiverToOutputMap.values) {
       element.put(LogicValue.x, fill: true);
     }
@@ -193,14 +193,18 @@ class Sequential extends _Always {
       if (clk.width > 1) {
         throw Exception('Each clk must be 1 bit, but saw $clk.');
       }
-      _clks.add(addInput(Module.unpreferredName('clk$i'), clk));
+      _clks.add(addInput(
+          _portUniquifier.getUniqueName(
+              initialName: Sanitizer.sanitizeSV(
+                  Module.unpreferredName('clk${i}_${clk.name}'))),
+          clk));
       _preTickClkValues.add(null);
     }
     _setup();
   }
 
   /// A map from input [Logic]s to the values that should be used for computations on the edge.
-  final Map<Logic, LogicValues> _inputToPreTickInputValuesMap = {};
+  final Map<Logic, LogicValue> _inputToPreTickInputValuesMap = {};
 
   /// The value of the clock before the tick.
   final List<LogicValue?> _preTickClkValues = [];
@@ -223,6 +227,9 @@ class Sequential extends _Always {
 
     // listen to every input of this `Sequential` for changes
     for (var driverInput in _assignedDriverToInputMap.values) {
+      // pre-fill the _inputToPreTickInputValuesMap so that nothing ever uses values directly
+      _inputToPreTickInputValuesMap[driverInput] = driverInput.value;
+
       driverInput.glitch.listen((event) {
         if (Simulator.phase != SimulatorPhase.clkStable) {
           // if the change happens not when the clocks are stable, immediately update the map
@@ -250,7 +257,7 @@ class Sequential extends _Always {
       var clk = _clks[i];
       clk.glitch.listen((event) {
         // we want the first previousValue from the first glitch of this tick
-        _preTickClkValues[i] ??= event.previousValue.bit;
+        _preTickClkValues[i] ??= event.previousValue;
         if (!_pendingExecute) {
           Simulator.clkStable.first.then((value) {
             // once the clocks are stable, execute the contents of the FF
@@ -268,11 +275,11 @@ class Sequential extends _Always {
     bool anyClkPosedge = false;
     for (var i = 0; i < _clks.length; i++) {
       // if the pre-tick value is null, then it should have the same value as it currently does
-      if (!_clks[i].bit.isValid || !(_preTickClkValues[i]?.isValid ?? true)) {
+      if (!_clks[i].value.isValid || !(_preTickClkValues[i]?.isValid ?? true)) {
         anyClkInvalid = true;
         break;
       } else if (_preTickClkValues[i] != null &&
-          LogicValue.isPosedge(_preTickClkValues[i]!, _clks[i].bit)) {
+          LogicValue.isPosedge(_preTickClkValues[i]!, _clks[i].value)) {
         anyClkPosedge = true;
         break;
       }
@@ -296,10 +303,8 @@ class Sequential extends _Always {
           }
           alreadySet.add(signal);
         }
-        throw Exception(
-            'Sequential drove the same signal(s) multiple times: $redrivenSignals.'
-            ' If you hit this Exception as a ROHD user,'
-            ' please file a bug at https://github.com/intel/rohd/issues');
+        throw Exception('Sequential drove the same signal(s) multiple times:'
+            ' $redrivenSignals.');
       }
     }
 
@@ -342,10 +347,10 @@ abstract class Conditional {
   /// A [Map] from driver [Logic] signals passed into this [Conditional] to the appropriate input logic port.
   late Map<Logic, Logic> _assignedDriverToInputMap;
 
-  /// A [Map] of override [LogicValues]s for driver [Logic]s of this [Conditional].
+  /// A [Map] of override [LogicValue]s for driver [Logic]s of this [Conditional].
   ///
   /// This is used for things like [Sequential]'s pre-tick values.
-  Map<Logic, LogicValues> _driverValueOverrideMap = {};
+  Map<Logic, LogicValue> _driverValueOverrideMap = {};
 
   /// Updates the values of [_assignedReceiverToOutputMap] and [_assignedDriverToInputMap] and
   /// passes them down to all sub-[Conditional]s as well.
@@ -363,7 +368,7 @@ abstract class Conditional {
 
   /// Updates the value of [_driverValueOverrideMap] and passes it down to all
   /// sub-[Conditional]s as well.
-  void _updateOverrideMap(Map<Logic, LogicValues> driverValueOverrideMap) {
+  void _updateOverrideMap(Map<Logic, LogicValue> driverValueOverrideMap) {
     // this is for always_ff pre-tick values
     _driverValueOverrideMap = driverValueOverrideMap;
     for (var conditional in getConditionals()) {
@@ -373,7 +378,7 @@ abstract class Conditional {
 
   /// Gets the value that should be used for execution for the input port associated with [driver].
   @protected
-  LogicValues driverValue(Logic driver) {
+  LogicValue driverValue(Logic driver) {
     return _driverValueOverrideMap.containsKey(driverInput(driver))
         ? _driverValueOverrideMap[driverInput(driver)]!
         : _assignedDriverToInputMap[driver]!.value;
@@ -440,8 +445,6 @@ class ConditionalAssign extends Conditional {
     }
   }
 
-  //TODO: how to handle a conditional fill a-la '1
-
   @override
   List<Logic> getReceivers() => [receiver];
   @override
@@ -451,7 +454,6 @@ class ConditionalAssign extends Conditional {
 
   @override
   List<Logic> execute() {
-    // print('>>Assigning $receiver [value ${receiver.value}] to $driver [value ${driver.value}]');
     receiverOutput(receiver).put(driverValue(driver));
     return [receiver];
   }
@@ -529,7 +531,7 @@ class Case extends Conditional {
 
   /// Returns true iff [value] matches the expressions current value.
   @protected
-  bool isMatch(LogicValues value) {
+  bool isMatch(LogicValue value) {
     return expression.value == value;
   }
 
@@ -541,7 +543,6 @@ class Case extends Conditional {
   List<Logic> execute() {
     var drivenLogics = <Logic>[];
 
-    //TODO: what about for CaseZ where epxressions can have Z?  BUG?
     if (!expression.value.isValid) {
       // if expression has X or Z, then propogate X's!
       for (var receiver in getReceivers()) {
@@ -559,7 +560,6 @@ class Case extends Conditional {
           drivenLogics.addAll(conditional.execute());
         }
         if (foundMatch != null && conditionalType == ConditionalType.unique) {
-          //TODO: replace this with a logger message
           throw Exception('Unique case statement had multiple matching cases.'
               ' Original: "$foundMatch".'
               ' Duplicate: "$item".');
@@ -725,13 +725,9 @@ class CaseZ extends Case {
   @override
   String get caseType => 'casez';
 
-  //TODO: should CaseZ force Const in items? Otherwise, what if a floating signal came into the case statement??
-  // or at least don't do wildcard for non-const items?
-
-  //TODO: what if there's an X in the expression? should throw exception!
   @override
-  bool isMatch(LogicValues value) {
-    if (expression.width != value.length) {
+  bool isMatch(LogicValue value) {
+    if (expression.width != value.width) {
       throw Exception(
           'Value "$value" and expression "$expression" must be equal width.');
     }

@@ -88,7 +88,7 @@ abstract class _OneInputUnaryGate extends Module
   /// The output of this gate (width is always 1).
   Logic get y => output(_y);
 
-  final LogicValue Function(LogicValues a) _op;
+  final LogicValue Function(LogicValue a) _op;
   final String _svOpStr;
 
   /// Constructs a unary gate for an abitrary custom functional implementation.
@@ -163,7 +163,7 @@ abstract class _TwoInputBitwiseGate extends Module
   /// The output of this gate.
   Logic get y => output(_y);
 
-  final LogicValues Function(LogicValues a, LogicValues b) _op;
+  final LogicValue Function(LogicValue a, LogicValue b) _op;
   final String _svOpStr;
   final String _circtOpStr;
 
@@ -260,7 +260,7 @@ abstract class _TwoInputComparisonGate extends Module
   /// The output of this gate.
   Logic get y => output(_y);
 
-  final LogicValue Function(LogicValues a, LogicValues b) _op;
+  final LogicValue Function(LogicValue a, LogicValue b) _op;
   final String _svOpStr;
   final String _circtOpStr;
 
@@ -349,7 +349,7 @@ class _ShiftGate extends Module with InlineSystemVerilog, CustomCirct {
   /// The output of this gate.
   Logic get y => output(_y);
 
-  final LogicValues Function(LogicValues a, LogicValues b) _op;
+  final LogicValue Function(LogicValue a, LogicValue b) _op;
   final String _svOpStr;
   final String _circtOpStr;
 
@@ -487,8 +487,6 @@ class Xor2Gate extends _TwoInputBitwiseGate {
   Xor2Gate(Logic a, Logic b, {String name = 'xor'})
       : super((a, b) => a ^ b, '^', 'xor', a, b, name: name);
 }
-
-//TODO: allow math operations on different sized Logics, with optional overrideable output size
 
 /// A two-input addition module.
 class Add extends _TwoInputBitwiseGate {
@@ -642,7 +640,7 @@ class Mux extends Module with InlineSystemVerilog, CustomCirct {
     _control = Module.unpreferredName('control_' + control.name);
     _d0 = Module.unpreferredName('d0_' + d0.name);
     _d1 = Module.unpreferredName('d1_' + d1.name);
-    _y = Module.unpreferredName('y'); //TODO: something better here?
+    _y = Module.unpreferredName('y');
 
     addInput(_control, control);
     addInput(_d0, d0, width: d0.width);
@@ -669,11 +667,11 @@ class Mux extends Module with InlineSystemVerilog, CustomCirct {
 
   /// Executes the functional behavior of the mux.
   void _execute() {
-    if (!control.bit.isValid) {
-      y.put(control.bit);
-    } else if (control.bit == LogicValue.zero) {
+    if (!control.value.isValid) {
+      y.put(control.value);
+    } else if (control.value == LogicValue.zero) {
       y.put(d0.value);
-    } else if (control.bit == LogicValue.one) {
+    } else if (control.value == LogicValue.one) {
       y.put(d1.value);
     }
   }

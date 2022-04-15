@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2022 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// module.dart
@@ -16,16 +16,16 @@ import 'package:rohd/src/utilities/sanitizer.dart';
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/utilities/uniquifier.dart';
 
-//TODO: make a way to convert SV modules into ROHD
-//  check out:  https://github.com/google/verible
-//              https://github.com/alainmarcel/Surelog
-
 /// Represents a synthesizable hardware entity with clearly defined interface boundaries.
 ///
 /// Any hardware to be synthesized must be contained within a [Module].
 /// This construct is similar to a SystemVerilog `module`.
 abstract class Module {
   /// The name of this [Module].
+  ///
+  /// This is not necessarily the same as the instance name in generated code.  For that,
+  /// see [uniqueInstanceName].  If you set [reserveName], then it is guaranteed to match
+  /// or else the [build] will fail.
   final String name;
 
   /// An internal list of sub-modules.
@@ -98,20 +98,44 @@ abstract class Module {
   /// Returns true iff [net] is the same [Logic] as the output port of this [Module] with the same name.
   bool isOutput(Logic net) => _outputs[net.name] == net;
 
-  /// If this module has a [parent], after [build()] this will be a guaranteed unique name within its scope.
-  String get uniqueInstanceName => hasBuilt
+  /// Returns true iff [net] is the same [Logic] as an input or output port of this [Module] with the same name.
+  bool isPort(Logic net) => isInput(net) || isOutput(net);
+
+  /// If this module has a [parent], after [build] this will be a guaranteed unique name within its scope.
+  String get uniqueInstanceName => hasBuilt || reserveName
       ? _uniqueInstanceName
       : throw Exception(
           'Module must be built to access uniquified name.  Call build() before accessing this.');
   String _uniqueInstanceName;
 
-  Module({this.name = 'unnamed_module'}) : _uniqueInstanceName = name;
+  /// If true, guarantees [uniqueInstanceName] matches [name] or else the [build] will fail.
+  final bool reserveName;
+
+  /// The definition name of this [Module] used when instantiating instances in generated code.
+  ///
+  /// By default, if none is provided at construction time, the definition name is the same
+  /// as the [runtimeType].
+  ///
+  /// This could become uniquified by a [Synthesizer] unless [reserveDefinitionName] is set.
+  String get definitionName => _definitionName ?? runtimeType.toString();
+  final String? _definitionName;
+
+  /// If true, guarantees [definitionName] is maintained by a [Synthesizer], or else it will fail.
+  final bool reserveDefinitionName;
+
+  Module(
+      {this.name = 'unnamed_module',
+      this.reserveName = false,
+      String? definitionName,
+      this.reserveDefinitionName = false})
+      : _uniqueInstanceName = name,
+        _definitionName = definitionName;
 
   /// Returns an [Iterable] of [Module]s representing the hierarchical path to this [Module].
   ///
   /// The first element of the [Iterable] is the top-most hierarchy.
   /// The last element of the [Iterable] is this [Module].
-  /// Only returns valid information after [build()].
+  /// Only returns valid information after [build].
   Iterable<Module> hierarchy() {
     if (!hasBuilt) {
       throw Exception(
@@ -157,29 +181,26 @@ abstract class Module {
     // construct the list of modules within this module
     // 1) trace from outputs of this module back to inputs of this module
     for (var output in _outputs.values) {
-      _traceOutputForModuleContents(output, dontAddSignal: true);
+      await _traceOutputForModuleContents(output, dontAddSignal: true);
     }
     // 2) trace from inputs of all modules to inputs of this module
     for (var input in _inputs.values) {
-      _traceInputForModuleContents(input, dontAddSignal: true);
-    }
-
-    for (var module in _modules) {
-      await module.build();
+      await _traceInputForModuleContents(input, dontAddSignal: true);
     }
 
     // set unique module instance names for submodules
     var uniquifier = Uniquifier();
     for (var module in _modules) {
       module._uniqueInstanceName = uniquifier.getUniqueName(
-          initialName: Sanitizer.sanitizeSV(module.name));
+          initialName: Sanitizer.sanitizeSV(module.name),
+          reserved: module.reserveName);
     }
 
     _hasBuilt = true;
   }
 
   /// Adds a [Module] to this as a subModule.
-  void _addModule(Module module) {
+  Future<void> _addAndBuildModule(Module module) async {
     if (module.parent != null) {
       throw Exception('This Module "$this" already has a parent. '
           'If you are hitting this as a user of ROHD, please file '
@@ -190,6 +211,7 @@ abstract class Module {
       _modules.add(module);
     }
     module._parent = this;
+    await module.build();
   }
 
   //TODO: make unpreferredName's show up as such in CIRCT generated stuff
@@ -206,7 +228,6 @@ abstract class Module {
   /// signals as "unpreferred" can have the effect of making generated output easier to read.
   @protected
   static String unpreferredName(String name) {
-    //TODO: how to make sure there's no module name conflicts??
     return _unpreferredPrefix + name;
   }
 
@@ -218,8 +239,8 @@ abstract class Module {
   }
 
   /// Searches for [Logic]s and [Module]s within this [Module] from its inputs.
-  void _traceInputForModuleContents(Logic signal,
-      {bool dontAddSignal = false}) {
+  Future<void> _traceInputForModuleContents(Logic signal,
+      {bool dontAddSignal = false}) async {
     if (isOutput(signal)) return;
 
     if (!signal.isInput && !signal.isOutput && signal.parentModule != null) {
@@ -233,8 +254,7 @@ abstract class Module {
 
     if (!dontAddSignal && signal.isOutput) {
       // somehow we have reached the output of a module which is not a submodule nor this module, bad!
-      //TODO: add tests that this exception hits!
-      throw Exception('Violation of input/output rules.'
+      throw Exception('Violation of input/output rules in $this on $signal.'
           '  Logic within a Module should only consume inputs and drive outputs of that Module.'
           '  See https://github.com/intel/rohd#modules for more information.');
     }
@@ -249,27 +269,45 @@ abstract class Module {
         (subModuleParent == null || subModuleParent == this)) {
       // if the subModuleParent hasn't been set, or it is the current module, then trace it
       if (subModuleParent != this) {
-        _addModule(subModule);
+        await _addAndBuildModule(subModule);
       }
       for (var subModuleOutput in subModule._outputs.values) {
-        _traceInputForModuleContents(subModuleOutput, dontAddSignal: true);
+        await _traceInputForModuleContents(subModuleOutput,
+            dontAddSignal: true);
       }
       for (var subModuleInput in subModule._inputs.values) {
-        _traceOutputForModuleContents(subModuleInput, dontAddSignal: true);
+        await _traceOutputForModuleContents(subModuleInput,
+            dontAddSignal: true);
       }
     } else {
       if (!dontAddSignal && !isInput(signal) && subModule == null) {
         _addInternalSignal(signal);
       }
+
+      if (!dontAddSignal && isInput(signal)) {
+        throw Exception('Input $signal of module $this is dependent on'
+            ' another input of the same module.');
+      }
+
       for (var dstConnection in signal.dstConnections) {
-        _traceInputForModuleContents(dstConnection);
+        if (signal.isOutput &&
+            dstConnection.isOutput &&
+            signal.parentModule! == dstConnection.parentModule!) {
+          // since both are outputs, we can't easily use them to
+          // check if they have already been traversed, so we must
+          // explicitly check that we're not running them back-to-back.
+          // another iteration will take care of continuing the trace
+          continue;
+        }
+
+        await _traceInputForModuleContents(dstConnection);
       }
     }
   }
 
   /// Searches for [Logic]s and [Module]s within this [Module] from its outputs.
-  void _traceOutputForModuleContents(Logic signal,
-      {bool dontAddSignal = false}) {
+  Future<void> _traceOutputForModuleContents(Logic signal,
+      {bool dontAddSignal = false}) async {
     if (isInput(signal)) return;
 
     if (!signal.isInput && !signal.isOutput && signal.parentModule != null) {
@@ -283,7 +321,7 @@ abstract class Module {
 
     if (!dontAddSignal && signal.isInput) {
       // somehow we have reached the input of a module which is not a submodule nor this module, bad!
-      throw Exception('Violation of input/output rules.'
+      throw Exception('Violation of input/output rules in $this on $signal.'
           '  Logic within a Module should only consume inputs and drive outputs of that Module.'
           '  See https://github.com/intel/rohd#modules for more information.');
     }
@@ -298,30 +336,34 @@ abstract class Module {
         (subModuleParent == null || subModuleParent == this)) {
       // if the subModuleParent hasn't been set, or it is the current module, then trace it
       if (subModuleParent != this) {
-        _addModule(subModule);
+        await _addAndBuildModule(subModule);
       }
       for (var subModuleInput in subModule._inputs.values) {
-        _traceOutputForModuleContents(subModuleInput, dontAddSignal: true);
+        await _traceOutputForModuleContents(subModuleInput,
+            dontAddSignal: true);
       }
       for (var subModuleOutput in subModule._outputs.values) {
-        _traceInputForModuleContents(subModuleOutput, dontAddSignal: true);
+        await _traceInputForModuleContents(subModuleOutput,
+            dontAddSignal: true);
       }
     } else {
       if (!dontAddSignal && !isOutput(signal) && subModule == null) {
         _addInternalSignal(signal);
       }
       if (signal.srcConnection != null) {
-        _traceOutputForModuleContents(signal.srcConnection!);
+        await _traceOutputForModuleContents(signal.srcConnection!);
       }
     }
   }
 
   /// Registers a signal as an internal signal.
   void _addInternalSignal(Logic signal) {
+    assert(!signal.isPort);
+
     _internalSignals.add(signal);
 
     // ignore: invalid_use_of_protected_member
-    signal.setParentModule(this);
+    signal.parentModule = this;
   }
 
   /// Checks whether a port name is safe to add (e.g. no duplicates).
@@ -348,7 +390,7 @@ abstract class Module {
     _inputs[name] = Logic(name: name, width: width)..gets(x);
 
     // ignore: invalid_use_of_protected_member
-    _inputs[name]!.setParentModule(this);
+    _inputs[name]!.parentModule = this;
 
     return _inputs[name]!;
   }
@@ -362,7 +404,7 @@ abstract class Module {
     _outputs[name] = Logic(name: name, width: width);
 
     // ignore: invalid_use_of_protected_member
-    _outputs[name]!.setParentModule(this);
+    _outputs[name]!.parentModule = this;
 
     return _outputs[name]!;
   }
@@ -389,11 +431,10 @@ abstract class Module {
     }
 
     var synthHeader = '''
-/// 
-/// Generated by ROHD - www.github.com/intel/rohd
-/// Generation time: ${DateTime.now()}
-/// ROHD author: Max Korbel <max.korbel@intel.com>
-/// 
+/**
+ * Generated by ROHD - www.github.com/intel/rohd
+ * Generation time: ${DateTime.now()}
+ */
 
 ''';
     return synthHeader +

@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2022 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// changed_test.dart
@@ -7,6 +7,8 @@
 /// 2021 November 5
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
+
+import 'dart:async';
 
 import 'package:rohd/rohd.dart';
 import 'package:test/test.dart';
@@ -77,5 +79,42 @@ void main() {
     await Simulator.run();
 
     expect(numPosedges, equals(1));
+  });
+
+  test('injection triggers flop', () async {
+    var baseClk = SimpleClockGenerator(10).clk;
+
+    var clk = Logic();
+    var d = Logic();
+
+    var q = FlipFlop(clk, d).q;
+
+    bool qHadPosedge = false;
+
+    Simulator.setMaxSimTime(100);
+
+    unawaited(q.nextPosedge.then((value) {
+      qHadPosedge = true;
+    }));
+
+    unawaited(Simulator.run());
+
+    await baseClk.nextPosedge;
+    clk.inject(0);
+    d.inject(0);
+    await baseClk.nextPosedge;
+    clk.inject(1);
+    await baseClk.nextPosedge;
+    expect(q.value, equals(LogicValue.zero));
+    clk.inject(0);
+    d.inject(1);
+    await baseClk.nextPosedge;
+    clk.inject(1);
+    await baseClk.nextPosedge;
+    expect(q.value, equals(LogicValue.one));
+
+    await Simulator.simulationEnded;
+
+    expect(qHadPosedge, equals(true));
   });
 }

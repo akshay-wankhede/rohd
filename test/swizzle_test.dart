@@ -9,7 +9,16 @@
 ///
 
 import 'package:rohd/rohd.dart';
+import 'package:rohd/src/utilities/simcompare.dart';
 import 'package:test/test.dart';
+
+class SwizzlyModule extends Module {
+  SwizzlyModule(Logic a) {
+    a = addInput('a', a);
+    var b = addOutput('b', width: 3);
+    b <= [Const(1), a, Const(1)].swizzle();
+  }
+}
 
 void main() {
   group('LogicValue', () {
@@ -17,28 +26,40 @@ void main() {
       expect(
           [LogicValue.one, LogicValue.zero, LogicValue.x, LogicValue.z]
               .swizzle(),
-          equals(LogicValues.fromString('10xz')));
+          equals(LogicValue.ofString('10xz')));
     });
     test('simple rswizzle', () {
       expect(
           [LogicValue.one, LogicValue.zero, LogicValue.x, LogicValue.z]
               .rswizzle(),
-          equals(LogicValues.fromString('zx01')));
+          equals(LogicValue.ofString('zx01')));
     });
   });
-  group('LogicValues', () {
+  group('LogicValue', () {
     test('simple swizzle', () {
-      expect(
-          [LogicValues.fromString('10'), LogicValues.fromString('xz')]
-              .swizzle(),
-          equals(LogicValues.fromString('10xz')));
+      expect([LogicValue.ofString('10'), LogicValue.ofString('xz')].swizzle(),
+          equals(LogicValue.ofString('10xz')));
     });
 
     test('simple rswizzle', () {
-      expect(
-          [LogicValues.fromString('10'), LogicValues.fromString('xz')]
-              .rswizzle(),
-          equals(LogicValues.fromString('xz10')));
+      expect([LogicValue.ofString('10'), LogicValue.ofString('xz')].rswizzle(),
+          equals(LogicValue.ofString('xz10')));
+    });
+  });
+
+  group('Logic', () {
+    test('simple swizzle', () async {
+      var mod = SwizzlyModule(Logic());
+      await mod.build();
+      var vectors = [
+        Vector({'a': 0}, {'b': bin('101')}),
+        Vector({'a': 1}, {'b': bin('111')}),
+      ];
+      await SimCompare.checkFunctionalVector(mod, vectors);
+      var simResult = SimCompare.iverilogVector(
+          mod.generateSynth(), mod.runtimeType.toString(), vectors,
+          signalToWidthMap: {'b': 3});
+      expect(simResult, equals(true));
     });
   });
 }
