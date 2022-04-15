@@ -678,7 +678,10 @@ ${subPadding}end
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    //TODO: support case vs. casez and priority & unique once CIRCT supports it
+    //TODO: support priority & unique once CIRCT supports it (https://github.com/llvm/circt/issues/2907)
+
+    //TODO: new syntax with latest version of CIRCT uses "sv.case casez" type syntax
+    // https://github.com/llvm/circt/blob/main/test/Conversion/ExportVerilog/sv-dialect.mlir#L299
     var expressionName = inputsNameMap[driverInput(expression).name];
     var lines = <String>[
       'sv.casez %$expressionName : i${expression.width}',
