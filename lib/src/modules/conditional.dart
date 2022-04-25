@@ -682,6 +682,8 @@ ${subPadding}end
 
     //TODO: new syntax with latest version of CIRCT uses "sv.case casez" type syntax
     // https://github.com/llvm/circt/blob/main/test/Conversion/ExportVerilog/sv-dialect.mlir#L299
+
+    //TODO: support case statements with variables once CIRCT supports it (https://github.com/llvm/circt/issues/2908)
     var expressionName = inputsNameMap[driverInput(expression).name];
     var lines = <String>[
       'sv.casez %$expressionName : i${expression.width}',
