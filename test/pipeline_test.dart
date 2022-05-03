@@ -8,6 +8,8 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'dart:io';
+
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/utilities/simcompare.dart';
 import 'package:test/test.dart';
@@ -26,6 +28,9 @@ class SimplePipelineModule extends Module {
     b <= pipeline.get(a);
   }
 }
+
+//TODO: add synthesizer stacktrace to show where code came from
+// and pass to both SV and CIRCT
 
 class RVPipelineModule extends Module {
   RVPipelineModule(Logic a, Logic reset, Logic validIn, Logic readyForOut)
@@ -71,6 +76,7 @@ void main() {
         Vector({'a': 4}, {'b': 6}),
         Vector({'a': 4}, {'b': 7}),
       ];
+
       await SimCompare.checkFunctionalVector(pipem, vectors);
       var simResult = SimCompare.iverilogVector(
           pipem.generateSynth(SystemVerilogSynthesizer()),
@@ -83,6 +89,9 @@ void main() {
     test('rv pipeline simple', () async {
       var pipem = RVPipelineModule(Logic(width: 8), Logic(), Logic(), Logic());
       await pipem.build();
+
+      File('tmppipe.sv')
+          .writeAsStringSync(pipem.generateSynth(SystemVerilogSynthesizer()));
 
       var signalToWidthMap = {'a': 8, 'b': 8};
 
