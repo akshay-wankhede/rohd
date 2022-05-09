@@ -75,18 +75,18 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
       throw Exception('BusSubset has exactly one input, but saw $inputs.');
     }
     var a = inputs[_original]!;
-    if (startIndex <= endIndex) {
-      var sliceString =
-          startIndex == endIndex ? '[$startIndex]' : '[$endIndex:$startIndex]';
-      return '$a$sliceString';
-    } else {
-      var bits = <String>[];
-      for (var i = endIndex; i <= startIndex; i++) {
-        bits.add('$a[$i]');
-      }
-      var bitsString = bits.join(', ');
-      return '{$bitsString}';
+
+    // SystemVerilog doesn't allow reverse-order select to reverse a bus, so do it manually
+    if (startIndex > endIndex) {
+      return '{' +
+          List.generate(startIndex - endIndex + 1, (i) => '$a[${endIndex + i}]')
+              .join(', ') +
+          '}';
     }
+
+    var sliceString =
+        startIndex == endIndex ? '[$startIndex]' : '[$endIndex:$startIndex]';
+    return '$a$sliceString';
   }
 
   @override
@@ -165,9 +165,8 @@ class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
 
   /// Executes the functional behavior of this gate.
   void _execute(int startIdx, Logic swizzleInput, LogicValueChanged? args) {
-    var updatedVal = out.value.toList();
-    updatedVal.setAll(startIdx, swizzleInput.value.toList());
-    out.put(LogicValue.of(updatedVal));
+    var updatedVal = out.value.withSet(startIdx, swizzleInput.value);
+    out.put(updatedVal);
   }
 
   @override
@@ -176,8 +175,10 @@ class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
       throw Exception('This swizzle has ${_swizzleInputs.length} inputs,'
           ' but saw $inputs with ${inputs.length} values.');
     }
-    var inputStr =
-        _swizzleInputs.reversed.map((e) => inputs[e.name]).join(', ');
+    var inputStr = _swizzleInputs.reversed
+        .where((e) => e.width > 0)
+        .map((e) => inputs[e.name])
+        .join(', ');
     return '{$inputStr}';
   }
 
