@@ -77,7 +77,9 @@ void main() {
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
       var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(), mod.runtimeType.toString(), vectors,
+          mod.generateSynth(SystemVerilogSynthesizer()),
+          mod.runtimeType.toString(),
+          vectors,
           signalToWidthMap: {'b': 2});
       expect(simResult, equals(true));
     });

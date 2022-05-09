@@ -195,6 +195,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
     for (var inputSynthLogic in inputMapping.keys) {
       if (inputSynthLogic.isConst) {
         var constName = synthesizer.nextTempName();
+        //TODO: does this really need to be BigInt?
         constDefinitions.add('%$constName = hw.constant '
             '${inputSynthLogic.constant.toBigInt()} : '
             'i${inputSynthLogic.logic.width}\n');

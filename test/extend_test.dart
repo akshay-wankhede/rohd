@@ -48,7 +48,9 @@ void main() {
         await mod.build();
         await SimCompare.checkFunctionalVector(mod, vectors);
         var simResult = SimCompare.iverilogVector(
-            mod.generateSynth(), mod.runtimeType.toString(), vectors,
+            mod.generateSynth(SystemVerilogSynthesizer()),
+            mod.runtimeType.toString(),
+            vectors,
             signalToWidthMap: {'a': 8, 'b': newWidth});
         expect(simResult, equals(true));
       }
@@ -99,7 +101,9 @@ void main() {
         await mod.build();
         await SimCompare.checkFunctionalVector(mod, vectors);
         var simResult = SimCompare.iverilogVector(
-            mod.generateSynth(), mod.runtimeType.toString(), vectors,
+            mod.generateSynth(SystemVerilogSynthesizer()),
+            mod.runtimeType.toString(),
+            vectors,
             signalToWidthMap: {'a': 8, 'b': updateWidth, 'c': 8});
         expect(simResult, equals(true));
       }

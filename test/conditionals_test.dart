@@ -226,7 +226,9 @@ void main() {
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
       var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(), mod.runtimeType.toString(), vectors);
+          mod.generateSynth(SystemVerilogSynthesizer()),
+          mod.runtimeType.toString(),
+          vectors);
       expect(simResult, equals(true));
     });
 
@@ -239,9 +241,12 @@ void main() {
         Vector({'a': 1, 'b': 0}, {'c': 1, 'd': 0, 'e': 1}),
         Vector({'a': 1, 'b': 1}, {'c': 0, 'd': 1, 'e': 1}),
       ];
+      //TODO: enable case test once case works with CIRCT
       await SimCompare.checkFunctionalVector(mod, vectors);
-      var simResult = SimCompare.iverilogVectorAll(
-          mod, mod.runtimeType.toString(), vectors,
+      var simResult = SimCompare.iverilogVector(
+          mod.generateSynth(SystemVerilogSynthesizer()),
+          mod.runtimeType.toString(),
+          vectors,
           dontDeleteTmpFiles: true);
       expect(simResult, equals(true));
     });
