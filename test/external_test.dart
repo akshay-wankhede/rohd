@@ -8,6 +8,8 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'dart:io';
+
 import 'package:rohd/rohd.dart';
 import 'package:test/test.dart';
 
@@ -28,14 +30,32 @@ class TopModule extends Module {
   }
 }
 
+//TODO: add a test that actually simulates with an external module
+//TODO: add tests that use various types of parameters (external types, ints, etc.)
+
 void main() {
-  test('instantiate', () async {
-    var mod = TopModule(Logic(width: 2));
-    await mod.build();
-    var sv = mod.generateSynth(SystemVerilogSynthesizer());
-    expect(
-        sv,
-        contains(
-            'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+  group('instantiate', () {
+    test('sv', () async {
+      var mod = TopModule(Logic(width: 2));
+      await mod.build();
+      var sv = mod.generateSynth(SystemVerilogSynthesizer());
+      expect(
+          sv,
+          contains(
+              'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+    });
+
+    // TODO: fix checking on this external test
+    test('circt', () async {
+      var mod = TopModule(Logic(width: 2));
+      await mod.build();
+      var sv = CirctSynthesizer.convertCirctToSystemVerilog(
+          mod.generateSynth(CirctSynthesizer()));
+      File('tmp.sv').writeAsStringSync(sv);
+      // expect(
+      //     sv,
+      //     contains(
+      //         'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+    });
   });
 }

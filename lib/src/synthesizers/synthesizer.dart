@@ -95,7 +95,8 @@ abstract class SynthesisResult {
         throw Exception('No defined instance type found.');
       }
       var instanceType =
-          moduleToInstanceTypeMap[subModuleInstantiation.module] ?? '*NONE*';
+          moduleToInstanceTypeMap[subModuleInstantiation.module] ??
+              '*NO_INSTANCE_TYPE_DEFINED*';
       var instantiationCode =
           subModuleInstantiation.instantiationCode(instanceType);
       if (instantiationCode != null) {

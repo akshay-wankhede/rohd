@@ -16,7 +16,7 @@ import 'package:rohd/rohd.dart';
 /// You can add custom behavior for how to synthesize the generated SystemVerilog
 /// as well as extend functionality with behavioral models or cosimulation.
 abstract class ExternalSystemVerilogModule extends Module
-    with CustomSystemVerilog {
+    with CustomSystemVerilog, CustomCirct {
   /// The name of the top SystemVerilog module.
   final String topModuleName;
 
@@ -37,6 +37,18 @@ abstract class ExternalSystemVerilogModule extends Module
       Map<String, String> inputs, Map<String, String> outputs) {
     return SystemVerilogSynthesizer.instantiationVerilogWithParameters(
         this, topModuleName, instanceName, inputs, outputs,
+        parameters: parameters, forceStandardInstantiation: true);
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    return CirctSynthesizer.instantiationCirctWithParameters(
+        this, instanceType, instanceName, inputs, outputs, synthesizer,
         parameters: parameters, forceStandardInstantiation: true);
   }
 }
