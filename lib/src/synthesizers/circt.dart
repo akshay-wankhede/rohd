@@ -15,9 +15,6 @@ import 'package:rohd/src/synthesizers/utilities/utilities.dart';
 
 class CirctSynthesizer extends Synthesizer {
   @override
-  bool generatesDefinition(Module module) => module is! CustomFunctionality;
-
-  @override
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap) {
     return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
@@ -154,6 +151,10 @@ class _CirctSynthesisResult extends SynthesisResult {
   }
 
   static String _referenceName(SynthLogic synthLogic) {
+    if (synthLogic.width == 0) {
+      throw Exception('Should not reference zero-width signals.');
+    }
+
     if (synthLogic.isConst) {
       var constant = synthLogic.constant;
       if (constant.isValid) {
@@ -246,17 +247,27 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
   String? instantiationCode(String instanceType) {
     if (!needsDeclaration) return null;
 
+    // if all the outputs have zero-width, we don't need to generate anything at all
+    var totalOutputWidth =
+        outputMapping.values.map((e) => e.width).reduce((a, b) => a + b);
+    if (totalOutputWidth == 0) return null;
+
     // collect consts for CIRCT, since you can't in-line them
     var constMap = <SynthLogic, String>{};
     var constDefinitions = <String>[];
     for (var inputSynthLogic in inputMapping.keys) {
       if (inputSynthLogic.isConst) {
-        var constName = synthesizer.nextTempName();
-        //TODO: does this really need to be BigInt?
-        constDefinitions.add('%$constName = hw.constant '
-            '${inputSynthLogic.constant.toBigInt()} : '
-            'i${inputSynthLogic.logic.width}\n');
-        constMap[inputSynthLogic] = constName;
+        if (inputSynthLogic.logic.width == 0) {
+          // shouldn't be using zero-width constants anywhere, omit them
+          constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
+        } else {
+          var constName = synthesizer.nextTempName();
+          //TODO: does this really need to be BigInt?
+          constDefinitions.add('%$constName = hw.constant '
+              '${inputSynthLogic.constant.toBigInt()} : '
+              'i${inputSynthLogic.logic.width}\n');
+          constMap[inputSynthLogic] = constName;
+        }
       }
     }
 

@@ -47,10 +47,8 @@ void main() {
         var mod = ExtendModule(Logic(width: 8), newWidth, extendType);
         await mod.build();
         await SimCompare.checkFunctionalVector(mod, vectors);
-        var simResult = SimCompare.iverilogVector(
-            mod.generateSynth(SystemVerilogSynthesizer()),
-            mod.runtimeType.toString(),
-            vectors,
+        var simResult = SimCompare.iverilogVectorAll(
+            mod, mod.runtimeType.toString(), vectors,
             signalToWidthMap: {'a': 8, 'b': newWidth});
         expect(simResult, equals(true));
       }

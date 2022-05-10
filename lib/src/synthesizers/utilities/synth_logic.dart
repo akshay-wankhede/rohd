@@ -11,6 +11,10 @@ class SynthLogic {
   LogicValue? _mergedConst;
   bool get needsDeclaration => _needsDeclaration;
   bool get isConst => _mergedNameSynthLogic?.isConst ?? _mergedConst != null;
+
+  /// Returns the width of the underlying [Logic] or constant.
+  int get width => isConst ? constant.width : logic.width;
+
   String get name {
     if (isConst) {
       throw Exception('SynthLogic is a const, has no name!');

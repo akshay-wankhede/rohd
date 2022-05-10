@@ -194,10 +194,13 @@ class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
 
     var outputName = outputs[_out];
 
+    var nonZeroSwizzleInputs =
+        _swizzleInputs.reversed.where((e) => e.width > 0);
+
     var bitsString =
-        _swizzleInputs.reversed.map((e) => '%${inputs[e.name]}').join(', ');
+        nonZeroSwizzleInputs.map((e) => '%${inputs[e.name]}').join(', ');
     var widthsString =
-        _swizzleInputs.reversed.map((e) => 'i${e.width}').join(', ');
+        nonZeroSwizzleInputs.map((e) => 'i${e.width}').join(', ');
 
     return [
       '// $instanceName',

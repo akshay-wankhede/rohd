@@ -337,8 +337,9 @@ class Sequential extends _Always {
     if (_clks.length == 1) {
       return 'sv.alwaysff(posedge %${inputs[_clks[0].name]})';
     } else {
+      //TODO: CIRCT only supports alwaysff with one edge?
       String triggers =
-          _clks.map((clk) => 'posedge ${inputs[clk.name]}').join(', ');
+          _clks.map((clk) => 'posedge %${inputs[clk.name]}').join(', ');
       return 'sv.always $triggers';
     }
   }
