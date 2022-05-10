@@ -904,6 +904,7 @@ sv.if %$conditionName {
   $ifContents
 }
 ''';
+        conditions.add(condition);
       }
     }
 
@@ -911,7 +912,7 @@ sv.if %$conditionName {
       circt += '$condition else {';
     }
     circt += elseContents;
-    circt += '}' * iffs.length;
+    circt += '}' * conditions.length;
 
     circt += '\n';
 
