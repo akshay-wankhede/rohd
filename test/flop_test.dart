@@ -42,10 +42,8 @@ void main() {
         Vector({'a': 0}, {'y': 0}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(SystemVerilogSynthesizer()),
-          ftm.runtimeType.toString(),
-          vectors);
+      var simResult = SimCompare.iverilogVectorAll(
+          ftm, ftm.runtimeType.toString(), vectors);
       expect(simResult, equals(true));
     });
 
@@ -64,10 +62,8 @@ void main() {
         Vector({'a': 0x1}, {'y': 0x55}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(SystemVerilogSynthesizer()),
-          ftm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          ftm, ftm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });

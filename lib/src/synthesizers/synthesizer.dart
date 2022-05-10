@@ -23,6 +23,7 @@ abstract class DelegatingCustomFunctionalityModule extends Module
   CustomFunctionality get delegate;
 
   //TODO: add circt in here
+  //TODO: test delegating
 
   @override
   String instantiationVerilog(String instanceType, String instanceName,

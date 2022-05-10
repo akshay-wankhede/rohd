@@ -1034,7 +1034,7 @@ $elseContents
 }
 
 /// Represents a single flip-flop with no reset.
-class FlipFlop extends Module with CustomSystemVerilog {
+class FlipFlop extends Module with CustomSystemVerilog, CustomCirct {
   /// Name for a port of this module.
   late final String _clk, _d, _q;
 
@@ -1046,6 +1046,8 @@ class FlipFlop extends Module with CustomSystemVerilog {
 
   /// The output of the flop.
   Logic get q => output(_q);
+
+  int get _width => q.width;
 
   FlipFlop(Logic clk, Logic d, {String name = 'flipflop'}) : super(name: name) {
     if (clk.width != 1) throw Exception('clk must be 1 bit');
@@ -1073,5 +1075,30 @@ class FlipFlop extends Module with CustomSystemVerilog {
     var d = inputs[_d]!;
     var q = outputs[_q]!;
     return 'always_ff @(posedge $clk) $q <= $d;  // $instanceName';
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    if (inputs.length != 2 || outputs.length != 1) {
+      throw Exception('FlipFlop has exactly two inputs and one output.');
+    }
+    var clk = inputs[_clk]!;
+    var d = inputs[_d]!;
+    var q = outputs[_q]!;
+    var tmpName = synthesizer.nextTempName();
+
+    return [
+      '// $instanceName',
+      '%$tmpName = sv.reg : !hw.inout<i$_width>',
+      'sv.alwaysff(posedge %$clk) {',
+      '  sv.passign %$tmpName, %$d : i$_width',
+      '}',
+      '%$q = sv.read_inout %$tmpName : !hw.inout<i$_width>',
+    ].join('\n');
   }
 }
