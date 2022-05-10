@@ -69,6 +69,7 @@ mixin CustomCirct on Module implements CustomFunctionality {
 }
 
 mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
+  @override
   String instantiationCirct(
       String instanceType,
       String instanceName,
@@ -248,9 +249,12 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
     if (!needsDeclaration) return null;
 
     // if all the outputs have zero-width, we don't need to generate anything at all
-    var totalOutputWidth =
-        outputMapping.values.map((e) => e.width).reduce((a, b) => a + b);
-    if (totalOutputWidth == 0) return null;
+    // but if there's no outputs, then its ok to keep it
+    if (outputMapping.isNotEmpty) {
+      var totalOutputWidth =
+          outputMapping.values.map((e) => e.width).reduce((a, b) => a + b);
+      if (totalOutputWidth == 0) return null;
+    }
 
     // collect consts for CIRCT, since you can't in-line them
     var constMap = <SynthLogic, String>{};
