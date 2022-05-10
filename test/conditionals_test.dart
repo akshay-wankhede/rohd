@@ -190,11 +190,9 @@ void main() {
         Vector({'a': 1, 'b': 1, 'd': 8}, {'y': 1, 'z': 1, 'x': 1, 'q': 8}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(SystemVerilogSynthesizer()),
-          mod.runtimeType.toString(),
-          vectors,
-          signalToWidthMap: {'d': 10, 'q': 10});
+      var simResult = SimCompare.iverilogVectorAll(
+          mod, mod.runtimeType.toString(), vectors,
+          signalToWidthMap: {'d': 10, 'q': 10}, dontDeleteTmpFiles: true);
       expect(simResult, equals(true));
     });
 

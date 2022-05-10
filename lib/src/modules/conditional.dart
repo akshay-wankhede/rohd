@@ -18,6 +18,7 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
   /// A [List] of the [Conditional]s to execute.
   final List<Conditional> conditionals;
 
+  //TODO: document what these are in more detail!
   final Map<Logic, Logic> _assignedReceiverToOutputMap = {};
   final Map<Logic, Logic> _assignedDriverToInputMap = {};
 
@@ -107,11 +108,18 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
+    var remappedInoutOutputs =
+        outputs.map((key, value) => MapEntry(key, synthesizer.nextTempName()));
     return [
       '//  $instanceName',
+      ...remappedInoutOutputs.entries.map((e) =>
+          '%${e.value} = sv.reg : !hw.inout<i${output(e.key).width}>'), //TODO: looks wrong?
       '${_circtAlwaysStatement(inputs)} {',
-      _circtAlwaysContents(inputs, outputs, _circtAssignOperator()),
+      _circtAlwaysContents(
+          inputs, remappedInoutOutputs, _circtAssignOperator()),
       '}',
+      ...outputs.entries.map((e) => '%${e.value} = '
+          'sv.read_inout %${remappedInoutOutputs[output(e.key).name]} : !hw.inout<i${output(e.key).width}>') //TODO: looks wrong?
     ].join('\n');
   }
 }
@@ -872,8 +880,42 @@ ${padding}end ''';
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    // TODO: implement circtContents
-    throw UnimplementedError();
+    var circt = '';
+
+    List<String> conditions = [];
+    String elseContents = '';
+
+    for (var iff in iffs) {
+      if (iff is Else && iff != iffs.last) {
+        throw Exception('Else must come last in an IfBlock.');
+      }
+
+      var conditionName = inputsNameMap[driverInput(iff.condition).name];
+      var ifContents = iff.then
+          .map((conditional) => conditional.circtContents(
+              inputsNameMap, outputsNameMap, assignOperator))
+          .join('\n');
+
+      if (iff is Else) {
+        elseContents = ifContents;
+      } else {
+        var condition = '''
+sv.if %$conditionName {
+  $ifContents
+}
+''';
+      }
+    }
+
+    for (var condition in conditions) {
+      circt += '$condition else {';
+    }
+    circt += elseContents;
+    circt += '}' * iffs.length;
+
+    circt += '\n';
+
+    return circt;
   }
 }
 
@@ -966,8 +1008,26 @@ ${padding}end ''';
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    // TODO: implement circtContents
-    throw UnimplementedError();
+    var conditionName = inputsNameMap[driverInput(condition).name];
+    var ifContents = then
+        .map((conditional) => conditional.circtContents(
+            inputsNameMap, outputsNameMap, assignOperator))
+        .join('\n');
+    var elseContents = orElse
+        .map((conditional) => conditional.circtContents(
+            inputsNameMap, outputsNameMap, assignOperator))
+        .join('\n');
+    var circt = '''sv.if %$conditionName {
+$ifContents
+} ''';
+    if (orElse.isNotEmpty) {
+      circt += '''else {
+$elseContents
+} ''';
+    }
+    circt += '\n';
+
+    return circt;
   }
 }
 

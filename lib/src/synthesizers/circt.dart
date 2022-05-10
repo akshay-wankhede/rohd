@@ -101,6 +101,7 @@ class _CirctSynthesisResult extends SynthesisResult {
     if (synthLogic.isConst) {
       var constant = synthLogic.constant;
       if (constant.isValid) {
+        //TODO: need to handle potential BigInt?
         return 'hw.constant ${constant.toInt()} : i${constant.width}';
       } else {
         //TODO: handle CIRCT invalid constants
