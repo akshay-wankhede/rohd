@@ -71,6 +71,62 @@ mixin CustomCirct on Module implements CustomFunctionality {
       CirctSynthesizer synthesizer);
 }
 
+mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    Map<String, String> remap(Map<String, String> original,
+        [int startingPoint = 0]) {
+      var entries = original.entries.toList();
+      var remappedEntries = <MapEntry<String, String>>[];
+      for (var i = 0; i < original.length; i++) {
+        var entry = entries[i];
+        remappedEntries.add(MapEntry(entry.key, '{{${i + startingPoint}}}'));
+      }
+      return Map.fromEntries(remappedEntries);
+    }
+
+    // TODO: NEED TO DECLARE LOCAL LOGICS??
+    // %0 = sv.reg : !hw.inout<i1>
+    // %clk = sv.read_inout %0 : !hw.inout<i1>
+
+    var remappedInputs = remap(inputs);
+    var remappedOutputs = remap(outputs, inputs.length);
+    var sv = instantiationVerilog(
+        instanceType, instanceName, remappedInputs, remappedOutputs);
+
+    //TODO: how to do multi-line strings so we don't have to remove comments and new-lines?
+    sv = sv.replaceAll(RegExp(r'//.*\n'), '');
+    sv = sv.replaceAll('\n', '  ');
+
+    var arguments =
+        [...inputs.values, ...outputs.values].map((e) => '%$e').join(', ');
+    var widths = [
+      ...inputs.keys.map((e) => input(e).width),
+      ...outputs.keys.map((e) => output(e).width)
+    ].map((e) => 'i$e').join(', ');
+
+    var outputDeclarations = outputs.entries.map((e) {
+      var tmpName = synthesizer.nextTempName();
+      var width = output(e.key).width;
+      return [
+        '%$tmpName = sv.reg : !hw.inout<i$width>',
+        '%${e.value} = sv.read_inout %$tmpName : !hw.inout<i$width>'
+      ].join('\n');
+    }).join('\n');
+
+    var circtOut = [
+      outputDeclarations,
+      'sv.verbatim "$sv" ($arguments) : $widths',
+    ].join('\n');
+
+    return circtOut;
+  }
+}
+
 class _CirctSynthesisResult extends SynthesisResult {
   /// A cached copy of the generated ports
   late final String _inputsString;
@@ -223,7 +279,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
       return (module as CustomCirct)
           .instantiationCirct(instanceType, name, inputs, outputs, synthesizer);
     } else if (module is CustomFunctionality) {
-      throw Exception('Module $module defines custom functionality but not'
+      throw Exception('Module $module defines custom functionality but not '
           'an implementation in CIRCT!');
     }
     //TODO: add a CIRCT verbatim for SystemVerilog available ones

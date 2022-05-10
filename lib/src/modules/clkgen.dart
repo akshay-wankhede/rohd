@@ -11,7 +11,8 @@
 import 'package:rohd/rohd.dart';
 
 /// A very simple clock generator.  Generates a non-synthesizable SystemVerilog representation.
-class SimpleClockGenerator extends Module with CustomSystemVerilog {
+class SimpleClockGenerator extends Module
+    with CustomSystemVerilog, VerbatimSystemVerilogCirct {
   final int clockPeriod;
 
   /// The generated clock.
