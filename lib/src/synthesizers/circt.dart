@@ -24,7 +24,7 @@ class CirctSynthesizer extends Synthesizer {
     return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 
-  Map<Object, int> _tempNameCounters = {};
+  final Map<Object, int> _tempNameCounters = {};
 
   /// Returns the next temporary name within the specified context.
   ///
@@ -233,7 +233,7 @@ class _CirctSynthesisResult extends SynthesisResult {
       CirctSynthesizer synthesizer, Module module) {
     return [
       _circtAssignments(synthesizer, module),
-      subModuleInstantiations(moduleToInstanceTypeMap), //TODO
+      subModuleInstantiations(moduleToInstanceTypeMap),
     ].join('\n');
   }
 
