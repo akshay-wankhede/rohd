@@ -88,12 +88,9 @@ void main() {
         // Vector({'a': -6, 'b': 2}, {'a_plus_b': -4}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
-          dontDeleteTmpFiles: true,
-          signalToWidthMap: signalToWidthMap);
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
+          dontDeleteTmpFiles: true, signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
 
@@ -108,10 +105,8 @@ void main() {
         Vector({'a': 6}, {'a_minus_const': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -126,10 +121,8 @@ void main() {
         Vector({'a': 6}, {'a_times_const': 30}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -146,10 +139,8 @@ void main() {
         Vector({'a': 6}, {'a_dividedby_const': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          gtm.generateSynth(SystemVerilogSynthesizer()),
-          gtm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          gtm, gtm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });

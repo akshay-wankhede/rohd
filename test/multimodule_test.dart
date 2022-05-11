@@ -63,10 +63,8 @@ void main() {
         Vector({'a': 1, 'b': 1}, {'y': 1, 'z': 0, 'z2': 0}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(SystemVerilogSynthesizer()),
-          ftm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          ftm, ftm.runtimeType.toString(), vectors,
           signalToWidthMap: {
             'a': 4,
             'y': 4,

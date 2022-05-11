@@ -200,7 +200,8 @@ class _CirctSynthesisResult extends SynthesisResult {
     _inputsString = _circtInputs();
     _outputsString = _circtOutputs();
     _outputsFooter = _circtOutputFooter();
-    _moduleContentsString = _circtModuleContents(moduleToInstanceTypeMap);
+    _moduleContentsString =
+        _circtModuleContents(moduleToInstanceTypeMap, synthesizer);
   }
 
   static String _referenceName(SynthLogic synthLogic) {
@@ -223,18 +224,26 @@ class _CirctSynthesisResult extends SynthesisResult {
     }
   }
 
-  String _circtModuleContents(Map<Module, String> moduleToInstanceTypeMap) {
+  String _circtModuleContents(Map<Module, String> moduleToInstanceTypeMap,
+      CirctSynthesizer synthesizer) {
     return [
-      _circtAssignments(),
+      _circtAssignments(synthesizer),
       subModuleInstantiations(moduleToInstanceTypeMap), //TODO
     ].join('\n');
   }
 
-  String _circtAssignments() {
-    var assignmentLines = [];
+  String _circtAssignments(CirctSynthesizer synthesizer) {
+    var assignmentLines = <String>[];
     for (var assignment in synthModuleDefinition.assignments) {
-      assignmentLines
-          .add('${assignment.dst.name} = ${_referenceName(assignment.src)};');
+      var tmpName = synthesizer.nextTempName();
+      var width = assignment.dst.width;
+      var srcName = _referenceName(assignment.src);
+      var dstName = assignment.dst.name;
+      assignmentLines.add([
+        '%$tmpName = sv.reg : !hw.inout<i$width>',
+        'sv.assign %$tmpName, $srcName : i$width',
+        '%$dstName = sv.read_inout %$tmpName : !hw.inout<i$width>'
+      ].join('\n'));
     }
     return assignmentLines.join('\n');
   }
