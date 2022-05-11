@@ -60,10 +60,8 @@ void main() {
         Vector({'sig': 1}, {'sig_sync': 1}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(SystemVerilogSynthesizer()),
-          ftm.runtimeType.toString(),
-          vectors);
+      var simResult = SimCompare.iverilogVectorAll(
+          ftm, ftm.runtimeType.toString(), vectors);
       expect(simResult, equals(true));
     });
   });

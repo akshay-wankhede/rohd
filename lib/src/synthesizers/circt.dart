@@ -210,17 +210,10 @@ class _CirctSynthesisResult extends SynthesisResult {
     }
 
     if (synthLogic.isConst) {
-      var constant = synthLogic.constant;
-      if (constant.isValid) {
-        //TODO: need to handle potential BigInt?
-        return 'hw.constant ${constant.toInt()} : i${constant.width}';
-      } else {
-        //TODO: handle CIRCT invalid constants
-        throw UnimplementedError(
-            "Don't know how to generate bitwise invalid vector in CIRCT yet...");
-      }
+      throw Exception(
+          'Cannot reference a constant, must separately declare it.');
     } else {
-      return '%${synthLogic.name}';
+      return synthLogic.name;
     }
   }
 
@@ -237,11 +230,28 @@ class _CirctSynthesisResult extends SynthesisResult {
     for (var assignment in synthModuleDefinition.assignments) {
       var tmpName = synthesizer.nextTempName();
       var width = assignment.dst.width;
-      var srcName = _referenceName(assignment.src);
+
+      String srcName;
+      if (assignment.src.isConst) {
+        var constant = assignment.src.constant;
+        if (constant.isValid) {
+          //TODO: need to handle potential BigInt?
+          srcName = synthesizer.nextTempName();
+          assignmentLines.add(
+              '%$srcName = hw.constant ${constant.toBigInt()} : i${constant.width}');
+        } else {
+          //TODO: handle CIRCT invalid constants
+          throw UnimplementedError(
+              "Don't know how to generate bitwise invalid vector in CIRCT yet...");
+        }
+      } else {
+        srcName = _referenceName(assignment.src);
+      }
+
       var dstName = assignment.dst.name;
       assignmentLines.add([
         '%$tmpName = sv.reg : !hw.inout<i$width>',
-        'sv.assign %$tmpName, $srcName : i$width',
+        'sv.assign %$tmpName, %$srcName : i$width',
         '%$dstName = sv.read_inout %$tmpName : !hw.inout<i$width>'
       ].join('\n'));
     }
@@ -265,7 +275,7 @@ class _CirctSynthesisResult extends SynthesisResult {
         ? ''
         : 'hw.output ' +
             synthModuleDefinition.outputs
-                .map((e) => _referenceName(e))
+                .map((e) => '%' + _referenceName(e))
                 .join(', ') +
             ' : ' +
             synthModuleDefinition.outputs
