@@ -74,7 +74,9 @@ class CirctSynthesizer extends Synthesizer {
       }
     }
 
-    return '$receiverStr = hw.instance "$instanceName"'
+    var assignReciever = outputs.isEmpty ? '' : '$receiverStr = ';
+
+    return '${assignReciever}hw.instance "$instanceName"'
         ' @$instanceType$parameterString ($inputStr) -> ($outputStr)';
   }
 

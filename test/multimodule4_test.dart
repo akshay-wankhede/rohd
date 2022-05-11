@@ -8,6 +8,8 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+import 'dart:io';
+
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/modules/passthrough.dart';
 import 'package:test/test.dart';
@@ -41,7 +43,7 @@ void main() {
     Simulator.reset();
   });
 
-  test('multimodules4', () async {
+  test('multimodules4 native sv', () async {
     var ftm = TopModule(Logic());
     await ftm.build();
 
@@ -55,9 +57,25 @@ void main() {
     var synth = ftm.generateSynth(SystemVerilogSynthesizer());
 
     // "z = 1" means it correctly traversed down from inputs
-    assert(synth.contains('z = 1'));
+    expect(synth, contains('z = 1'));
+  });
 
-    // print(ftm.hierarchy());
-    // File('tmp4.sv').writeAsStringSync(synth);
+  test('multimodules4 circt', () async {
+    var ftm = TopModule(Logic());
+    await ftm.build();
+
+    // find a module with 'z' output 2 levels deep
+    assert(ftm.subModules
+        .where((pIn1) => pIn1.subModules
+            .where((pIn2) => pIn2.outputs.containsKey('z'))
+            .isNotEmpty)
+        .isNotEmpty);
+
+    var synth = CirctSynthesizer.convertCirctToSystemVerilog(
+        ftm.generateSynth(CirctSynthesizer()));
+
+    // "z = 1" means it correctly traversed down from inputs
+    expect(synth, contains("_T = 1'h1"));
+    expect(synth, contains('z = _T'));
   });
 }
