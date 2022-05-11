@@ -63,10 +63,8 @@ void main() {
         }),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      var simResult = SimCompare.iverilogVector(
-          mod.generateSynth(SystemVerilogSynthesizer()),
-          mod.runtimeType.toString() + '_3',
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          mod, mod.runtimeType.toString() + '_3', vectors,
           signalToWidthMap: {
             ...{
               for (var i in List<int>.generate(16, (index) => index)) 'seq$i': 8

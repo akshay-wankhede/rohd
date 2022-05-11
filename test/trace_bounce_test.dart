@@ -47,10 +47,8 @@ void main() {
       Vector({'a_top': 1}, {'bundle_top': 6}),
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    var simResult = SimCompare.iverilogVector(
-        mod.generateSynth(SystemVerilogSynthesizer()),
-        mod.runtimeType.toString(),
-        vectors,
+    var simResult = SimCompare.iverilogVectorAll(
+        mod, mod.runtimeType.toString(), vectors,
         signalToWidthMap: {'bundle_top': 3});
     expect(simResult, equals(true));
   });

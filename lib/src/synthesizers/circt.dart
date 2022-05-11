@@ -24,8 +24,18 @@ class CirctSynthesizer extends Synthesizer {
     return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
   }
 
-  int _tempNameCounter = 0;
-  String nextTempName() => '${_tempNameCounter++}';
+  Map<Object, int> _tempNameCounters = {};
+
+  /// Returns the next temporary name within the specified context.
+  ///
+  /// Typically, context would be the parent module.
+  String nextTempName(Object context) => _tempNameCounters
+      .update(
+        context,
+        (value) => value + 1,
+        ifAbsent: () => 0,
+      )
+      .toString();
 
   static String instantiationCirctWithParameters(
       Module module,
@@ -162,7 +172,7 @@ mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
 
     //TODO: is it really necessary to define local logic's here?
     var outputDeclarations = outputs.entries.map((e) {
-      var tmpName = synthesizer.nextTempName();
+      var tmpName = synthesizer.nextTempName(parent!);
       var width = output(e.key).width;
       return [
         '%$tmpName = sv.reg : !hw.inout<i$width>',
@@ -203,7 +213,7 @@ class _CirctSynthesisResult extends SynthesisResult {
     _outputsString = _circtOutputs();
     _outputsFooter = _circtOutputFooter();
     _moduleContentsString =
-        _circtModuleContents(moduleToInstanceTypeMap, synthesizer);
+        _circtModuleContents(moduleToInstanceTypeMap, synthesizer, module);
   }
 
   static String _referenceName(SynthLogic synthLogic) {
@@ -220,17 +230,17 @@ class _CirctSynthesisResult extends SynthesisResult {
   }
 
   String _circtModuleContents(Map<Module, String> moduleToInstanceTypeMap,
-      CirctSynthesizer synthesizer) {
+      CirctSynthesizer synthesizer, Module module) {
     return [
-      _circtAssignments(synthesizer),
+      _circtAssignments(synthesizer, module),
       subModuleInstantiations(moduleToInstanceTypeMap), //TODO
     ].join('\n');
   }
 
-  String _circtAssignments(CirctSynthesizer synthesizer) {
+  String _circtAssignments(CirctSynthesizer synthesizer, Module module) {
     var assignmentLines = <String>[];
     for (var assignment in synthModuleDefinition.assignments) {
-      var tmpName = synthesizer.nextTempName();
+      var tmpName = synthesizer.nextTempName(module);
       var width = assignment.dst.width;
 
       String srcName;
@@ -238,7 +248,7 @@ class _CirctSynthesisResult extends SynthesisResult {
         var constant = assignment.src.constant;
         if (constant.isValid) {
           //TODO: need to handle potential BigInt?
-          srcName = synthesizer.nextTempName();
+          srcName = synthesizer.nextTempName(module);
           assignmentLines.add(
               '%$srcName = hw.constant ${constant.toBigInt()} : i${constant.width}');
         } else {
@@ -359,7 +369,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
           // shouldn't be using zero-width constants anywhere, omit them
           constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
         } else {
-          var constName = synthesizer.nextTempName();
+          var constName = synthesizer.nextTempName(module);
           //TODO: does this really need to be BigInt?
           constDefinitions.add('%$constName = hw.constant '
               '${inputSynthLogic.constant.toBigInt()} : '

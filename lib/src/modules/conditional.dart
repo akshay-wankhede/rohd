@@ -108,8 +108,8 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    var remappedInoutOutputs =
-        outputs.map((key, value) => MapEntry(key, synthesizer.nextTempName()));
+    var remappedInoutOutputs = outputs
+        .map((key, value) => MapEntry(key, synthesizer.nextTempName(parent!)));
     return [
       '//  $instanceName',
       ...remappedInoutOutputs.entries.map((e) =>
@@ -1090,7 +1090,7 @@ class FlipFlop extends Module with CustomSystemVerilog, CustomCirct {
     var clk = inputs[_clk]!;
     var d = inputs[_d]!;
     var q = outputs[_q]!;
-    var tmpName = synthesizer.nextTempName();
+    var tmpName = synthesizer.nextTempName(parent!);
 
     return [
       '// $instanceName',

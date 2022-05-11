@@ -65,7 +65,7 @@ class NotGate extends Module with InlineSystemVerilog, CustomCirct {
     assert(outputs.length == 1);
     var aName = inputs[_a]!;
     var outName = outputs[_out]!;
-    var neg1 = synthesizer.nextTempName();
+    var neg1 = synthesizer.nextTempName(parent!);
     return [
       '// $instanceName',
       '%$neg1 = hw.constant -1 : i${a.width}',
@@ -407,11 +407,11 @@ class _ShiftGate extends Module with InlineSystemVerilog, CustomCirct {
     assert(signal.width <= targetWidth);
 
     var lines = <String>[];
-    var paddingVar = synthesizer.nextTempName();
+    var paddingVar = synthesizer.nextTempName(parent!);
     var paddingWidth = targetWidth - signal.width;
 
     if (signed) {
-      var signVar = synthesizer.nextTempName();
+      var signVar = synthesizer.nextTempName(parent!);
       lines.add(
           '%$signVar = comb.extract %$originalName from ${signal.width - 1} :'
           '(i${signal.width}) -> i1');
@@ -442,12 +442,12 @@ class _ShiftGate extends Module with InlineSystemVerilog, CustomCirct {
     var inputLines = <String>[];
     var aWideName = aName, bWideName = bName;
     if (a.width < inputWidth) {
-      aWideName = synthesizer.nextTempName();
+      aWideName = synthesizer.nextTempName(parent!);
       inputLines
           .addAll(_paddingCirct(aWideName, aName, a, inputWidth, synthesizer));
     }
     if (b.width < inputWidth) {
-      bWideName = synthesizer.nextTempName();
+      bWideName = synthesizer.nextTempName(parent!);
       inputLines
           .addAll(_paddingCirct(bWideName, bName, b, inputWidth, synthesizer));
     }
@@ -456,7 +456,7 @@ class _ShiftGate extends Module with InlineSystemVerilog, CustomCirct {
     var yWideName = yName;
     var outputLines = <String>[];
     if (y.width < inputWidth) {
-      yWideName = synthesizer.nextTempName();
+      yWideName = synthesizer.nextTempName(parent!);
       outputLines.add('%$yName = comb.extract %$yWideName from 0 :'
           ' (i$inputWidth) -> i${y.width}');
     }
@@ -550,7 +550,7 @@ class AndUnary extends _OneInputUnaryGate {
   @override
   String _generateCirct(
       String aName, String yName, CirctSynthesizer synthesizer) {
-    var neg1 = synthesizer.nextTempName();
+    var neg1 = synthesizer.nextTempName(parent!);
     return [
       '%$neg1 = hw.constant -1 : i${a.width}',
       '%$yName = comb.icmp eq %$aName, %$neg1 : i${a.width}'
@@ -566,7 +566,7 @@ class OrUnary extends _OneInputUnaryGate {
   @override
   String _generateCirct(
       String aName, String yName, CirctSynthesizer synthesizer) {
-    var zero = synthesizer.nextTempName();
+    var zero = synthesizer.nextTempName(parent!);
     return [
       '%$zero = hw.constant 0 : i${a.width}',
       '%$yName = comb.icmp ne %$aName, %$zero : i${a.width}'

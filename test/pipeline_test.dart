@@ -78,10 +78,8 @@ void main() {
       ];
 
       await SimCompare.checkFunctionalVector(pipem, vectors);
-      var simResult = SimCompare.iverilogVector(
-          pipem.generateSynth(SystemVerilogSynthesizer()),
-          pipem.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          pipem, pipem.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -119,10 +117,8 @@ void main() {
             {'validOut': 0}),
       ];
       await SimCompare.checkFunctionalVector(pipem, vectors);
-      var simResult = SimCompare.iverilogVector(
-          pipem.generateSynth(SystemVerilogSynthesizer()),
-          pipem.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          pipem, pipem.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -179,10 +175,8 @@ void main() {
             {'validOut': 0}),
       ];
       await SimCompare.checkFunctionalVector(pipem, vectors);
-      var simResult = SimCompare.iverilogVector(
-          pipem.generateSynth(SystemVerilogSynthesizer()),
-          pipem.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          pipem, pipem.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
@@ -229,10 +223,8 @@ void main() {
             {'validOut': 0}),
       ];
       await SimCompare.checkFunctionalVector(pipem, vectors);
-      var simResult = SimCompare.iverilogVector(
-          pipem.generateSynth(SystemVerilogSynthesizer()),
-          pipem.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          pipem, pipem.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });

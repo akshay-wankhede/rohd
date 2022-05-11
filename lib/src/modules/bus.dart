@@ -109,7 +109,7 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
     } else {
       var bitNames = <String>[];
       for (var i = endIndex; i <= startIndex; i++) {
-        var bitName = synthesizer.nextTempName();
+        var bitName = synthesizer.nextTempName(parent!);
         lines.add('%$bitName = comb.extract %$originalName from $i :'
             '(i${original.width}) -> i1');
         bitNames.add(bitName);

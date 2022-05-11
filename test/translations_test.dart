@@ -135,10 +135,8 @@ void main() {
         Vector({'wrEn1': 0, 'rdEn0': 0}, {'rdData0': 0xf}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVector(
-          ftm.generateSynth(SystemVerilogSynthesizer()),
-          ftm.runtimeType.toString(),
-          vectors,
+      var simResult = SimCompare.iverilogVectorAll(
+          ftm, ftm.runtimeType.toString(), vectors,
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
