@@ -35,34 +35,70 @@ class SpeciallyNamedModule extends Module {
 
 void main() {
   group('definition name', () {
-    test('respected with no conflicts', () async {
-      var mod = SpeciallyNamedModule(Logic(), false, false);
-      await mod.build();
-      expect(mod.generateSynth(SystemVerilogSynthesizer()),
-          contains('module specialName('));
+    group('native sv', () {
+      test('respected with no conflicts', () async {
+        var mod = SpeciallyNamedModule(Logic(), false, false);
+        await mod.build();
+        expect(mod.generateSynth(SystemVerilogSynthesizer()),
+            contains('module specialName('));
+      });
+      test('uniquified with conflicts', () async {
+        var mod = TopModule(Logic(), false, false);
+        await mod.build();
+        var sv = mod.generateSynth(SystemVerilogSynthesizer());
+        expect(sv, contains('module specialName('));
+        expect(sv, contains('module specialName_0('));
+      });
+
+      test('reserved throws exception with conflicts', () async {
+        var mod = TopModule(Logic(), true, false);
+        await mod.build();
+        expect(() => mod.generateSynth(SystemVerilogSynthesizer()),
+            throwsException);
+      });
     });
-    test('uniquified with conflicts', () async {
-      var mod = TopModule(Logic(), false, false);
-      await mod.build();
-      var sv = mod.generateSynth(SystemVerilogSynthesizer());
-      expect(sv, contains('module specialName('));
-      expect(sv, contains('module specialName_0('));
-    });
-    test('reserved throws exception with conflicts', () async {
-      var mod = TopModule(Logic(), true, false);
-      await mod.build();
-      expect(
-          () => mod.generateSynth(SystemVerilogSynthesizer()), throwsException);
+
+    group('circt', () {
+      test('respected with no conflicts', () async {
+        var mod = SpeciallyNamedModule(Logic(), false, false);
+        await mod.build();
+        expect(
+            CirctSynthesizer.convertCirctToSystemVerilog(
+                mod.generateSynth(CirctSynthesizer())),
+            contains('module specialName('));
+      });
+      test('uniquified with conflicts', () async {
+        var mod = TopModule(Logic(), false, false);
+        await mod.build();
+        var sv = CirctSynthesizer.convertCirctToSystemVerilog(
+            mod.generateSynth(CirctSynthesizer()));
+        expect(sv, contains('module specialName('));
+        expect(sv, contains('module specialName_0('));
+      });
+
+      test('reserved throws exception with conflicts', () async {
+        var mod = TopModule(Logic(), true, false);
+        await mod.build();
+        expect(() => mod.generateSynth(CirctSynthesizer()), throwsException);
+      });
     });
   });
 
   group('instance name', () {
-    test('uniquified with conflicts', () async {
+    test('uniquified with conflicts, native sv', () async {
       var mod = TopModule(Logic(), false, false);
       await mod.build();
       var sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(sv, contains('specialNameInstance('));
       expect(sv, contains('specialNameInstance_0('));
+    });
+    test('uniquified with conflicts, circt', () async {
+      var mod = TopModule(Logic(), false, false);
+      await mod.build();
+      var sv = CirctSynthesizer.convertCirctToSystemVerilog(
+          mod.generateSynth(CirctSynthesizer()));
+      expect(sv, contains('specialNameInstance ('));
+      expect(sv, contains('specialNameInstance_0 ('));
     });
     test('reserved throws exception with conflicts', () async {
       var mod = TopModule(Logic(), false, true);
