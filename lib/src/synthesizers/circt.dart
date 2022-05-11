@@ -369,7 +369,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
           // shouldn't be using zero-width constants anywhere, omit them
           constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
         } else {
-          var constName = synthesizer.nextTempName(module);
+          var constName = synthesizer.nextTempName(module.parent!);
           //TODO: does this really need to be BigInt?
           constDefinitions.add('%$constName = hw.constant '
               '${inputSynthLogic.constant.toBigInt()} : '
