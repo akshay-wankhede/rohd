@@ -47,7 +47,7 @@
 <a href="https://intel.github.io/rohd/rohd/rohd-library.html"><img src="https://img.shields.io/badge/API%20Docs-generated-success" alt="API Docs"></a>
 <a href="https://discord.gg/jubxF84yGw"><img src="https://img.shields.io/discord/1001179329411166267?label=Chat" alt="Chat"></a>
 <a href="https://github.com/intel/rohd/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-BSD--3-blue" alt="License"></a>
-<a href="https://github.com/intel/rohd/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-1.4-4baaaa.svg" alt="Contributor Covenant"></a></p>
+<a href="https://github.com/intel/rohd/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant"></a></p>
 <h1 id="rapid-open-hardware-development-rohd-framework">Rapid Open Hardware Development (ROHD) Framework</h1>
 <h2 id="describing-hardware-in-dart-with-rohd">Describing Hardware in Dart with ROHD</h2>
 <p>ROHD (pronounced like "road") is a framework for describing and verifying hardware in the Dart programming language.  ROHD enables you to build and traverse a graph of connectivity between module objects using unrestricted software.</p>
@@ -173,7 +173,7 @@ var x = Logic();
 var bus = Logic(name: 'b', width: 8)
 </code></pre>
 <h4 id="the-value-of-a-signal">The value of a signal</h4>
-<p>You can access the current value of a signal using <code>value</code>.  You cannot access this as part of synthesizable ROHD code.  ROHD supports X and Z values and propogation.  If the signal is valid (no X or Z in it), you can also convert it to an int with <code>valueInt</code> (ROHD will throw an exception otherwise).  If the signal has more bits than a dart <code>int</code> (64 bits, usually), you need to use <code>valueBigInt</code> to get a <code>BigInt</code> (again, ROHD will throw an exception otherwise).</p>
+<p>You can access the current value of a signal using <code>value</code>.  You cannot access this as part of synthesizable ROHD code.  ROHD supports X and Z values and propogation.  If the signal is valid (no X or Z in it), you can also convert it to an int with <code>value.toInt()</code> (ROHD will throw an exception otherwise).  If the signal has more bits than a dart <code>int</code> (64 bits, usually), you need to use <code>value.toBigInt()</code> to get a <code>BigInt</code> (again, ROHD will throw an exception otherwise).</p>
 <p>The value of a <code>Logic</code> is of type <a href="https://intel.github.io/rohd/rohd/LogicValue-class.html"><code>LogicValue</code></a>, with pre-defined constant bit values <code>x</code>, <code>z</code>, <code>one</code>, and <code>zero</code>.  <code>LogicValue</code> has a number of built-in logical operations (like &amp;, |, ^, +, -, etc.).</p>
 <pre class="language-dart"><code class="language-dart">var x = Logic(width:2);
 
@@ -238,6 +238,7 @@ a_lt_b    &lt;=  a.lt(b)  // less than             NOTE: &lt;  is for conditiona
 a_lte_b   &lt;=  a.lte(b) // less than or equal    NOTE: &lt;= is for assignment
 a_gt_b    &lt;=  (a &gt; b)  // greater than          NOTE: careful with order of operations, &gt; needs parentheses in this case
 a_gte_b   &lt;=  (a &gt;= b) // greater than or equal NOTE: careful with order of operations, &gt;= needs parentheses in this case
+answer    &lt;=  mux(selectA, a, b) // answer = selectA ? a : b
 </code></pre>
 <h3 id="shift-operations">Shift Operations</h3>
 <p>Dart has <a href="https://github.com/dart-lang/language/blob/master/accepted/2.14/triple-shift-operator/feature-specification.md">implemented the triple shift</a> operator (&gt;&gt;&gt;) in the opposite way as is <a href="https://www.nandland.com/verilog/examples/example-shift-operator-verilog.html">implemented in SystemVerilog</a>.  That is to say in Dart, &gt;&gt;&gt; means <em>logical</em> shift right (fill with 0's), and &gt;&gt; means <em>arithmetic</em> shift right (maintaining sign).  ROHD keeps consistency with Dart's implementation to avoid introducing confusion within Dart code you write (whether ROHD or plain Dart).</p>
@@ -499,45 +500,50 @@ a.inject(LogicValue.x);
 <p>Note: changing a value directly with <code>put()</code> will propogate the value, but it will not trigger flip-flop edge detection or cosim interaction.</p>
 <h3 id="custom-module-behavior-with-custom-in-line-systemverilog-representation">Custom module behavior with custom in-line SystemVerilog representation</h3>
 <p>Many of the basic built-in gates in Dart implement custom behavior.  An implementation of the NotGate is shown below as an example.  There is different syntax for functions which can be inlined versus those which cannot (the ~ can be inlined).  In this case, the <code>InlineSystemVerilog</code> mixin is used, but if it were not inlineable, you could use <code>CustomSystemVerilog</code>.  Note that it is mandatory to provide an initial value computation when the module is first created for non-sequential modules.</p>
-<pre class="language-dart"><code class="language-dart">class NotGate extends Module with InlineSystemVerilog {
+<pre class="language-dart"><code class="language-dart">/// A gate [Module] that performs bit-wise inversion.
+class NotGate extends Module with InlineSystemVerilog {
+  /// Name for the input of this inverter.
+  late final String _inName;
 
-  /// Name for a port of this module. 
-  late final String _a, _out;
-  
+  /// Name for the output of this inverter.
+  late final String _outName;
+
   /// The input to this [NotGate].
-  Logic get a =&gt; input(_a);
+  Logic get _in =&gt; input(_inName);
 
   /// The output of this [NotGate].
-  Logic get out =&gt; output(_out);
+  Logic get out =&gt; output(_outName);
 
-  NotGate(Logic a, {String name = 'not'}) : super(name: name) {
-    _a = Module.unpreferredName(a.name);
-    _out = Module.unpreferredName('${a.name}_b');
-    addInput(_a, a, width: a.width);
-    addOutput(_out, width: a.width);
+  /// Constructs a [NotGate] with [in_] as its input.
+  ///
+  /// You can optionally set [name] to name this [Module].
+  NotGate(Logic in_, {super.name = 'not'}) {
+    _inName = Module.unpreferredName(in_.name);
+    _outName = Module.unpreferredName('${in_.name}_b');
+    addInput(_inName, in_, width: in_.width);
+    addOutput(_outName, width: in_.width);
     _setup();
   }
 
   /// Performs setup steps for custom functional behavior.
   void _setup() {
     _execute(); // for initial values
-
-    // Custom behavior should subscribe to 'glitch'
-    a.glitch.listen((args) {
+    _in.glitch.listen((args) {
       _execute();
     });
   }
 
   /// Executes the functional behavior of this gate.
   void _execute() {
-    out.put(~a.value);
+    out.put(~_in.value);
   }
 
-  // specify how to convert this behavior to Verilog
   @override
-  String inlineVerilog(Map&lt;String,String&gt; inputs) {
-    if(inputs.length != 1) throw Exception('Gate has exactly one input.');
-    var a = inputs[_a]!;
+  String inlineVerilog(Map&lt;String, String&gt; inputs) {
+    if (inputs.length != 1) {
+      throw Exception('Gate has exactly one input.');
+    }
+    final a = inputs[_inName]!;
     return '~$a';
   }
 }
@@ -645,7 +651,7 @@ var b = pipeline.get(a);
 <li>To add an action to the Simulator in the <em>current</em> timestep, use <code>Simulator.injectAction</code>.</li>
 </ul>
 <h2 id="instantiation-of-external-modules">Instantiation of External Modules</h2>
-<p>ROHD can instantiate external SystemVerilog modules.  The <a href="https://intel.github.io/rohd/rohd/ExternalSystemVerilogModule-class.html"><code>ExternalSystemVerilogModule</code></a> constructor requires the top level SystemVerilog module name.  When ROHD generates SystemVerilog for a model containing an <code>ExternalSystemVerilogModule</code>, it will instantiate instances of the specified <code>topModuleName</code>.  This is useful for integration related activities.</p>
+<p>ROHD can instantiate external SystemVerilog modules.  The <a href="https://intel.github.io/rohd/rohd/ExternalSystemVerilogModule-class.html"><code>ExternalSystemVerilogModule</code></a> constructor requires the top level SystemVerilog module name.  When ROHD generates SystemVerilog for a model containing an <code>ExternalSystemVerilogModule</code>, it will instantiate instances of the specified <code>definitionName</code>.  This is useful for integration related activities.</p>
 <p>There is an upcoming package for SystemVerilog cosimulation with ROHD which adds cosimulation capabilities to an <code>ExternalSystemVerilogModule</code> planned for release soon.</p>
 <h2 id="unit-testing">Unit Testing</h2>
 <p>Dart has a great unit testing package available on pub.dev: <a href="https://pub.dev/packages/test">https://pub.dev/packages/test</a></p>
@@ -771,7 +777,7 @@ SPDX-License-Identifier: BSD-3-Clause
 <footer>
   <span class="no-break">
     rohd
-      0.3.2
+      0.4.1
   </span>
 
   

@@ -52,21 +52,24 @@
       
 <div>
   <ol class="annotation-list">
-    <li>@<a href="https://api.dart.dev/stable/2.18.3/dart-core/override-constant.html">override</a></li>
+    <li>@<a href="https://api.dart.dev/stable/2.18.7/dart-core/override-constant.html">override</a></li>
   </ol>
 </div>
 
-<span class="returntype"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../../rohd/Logic-class.html">Logic</a></span>&gt;</span></span>
-<span class="name ">execute</span>(<wbr>)
+<span class="returntype">void</span>
+<span class="name ">execute</span>(<wbr><ol class="parameter-list"><li><span class="parameter" id="execute-param-drivenSignals"><span class="type-annotation"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../../rohd/Logic-class.html">Logic</a></span>&gt;</span></span> <span class="parameter-name">drivenSignals</span></span></li>
+</ol>)
 
       <div class="features">override</div>
 
     </section>
     
 <section class="desc markdown">
-  <p>Executes the functionality represented by this <a href="../../rohd/Conditional-class.html">Conditional</a>.</p>
-<p>Returns a <a href="https://api.dart.dev/stable/2.18.3/dart-core/List-class.html">List</a> of all <code>Logic</code> signals which were driven during
-execution.</p>
+  <p>Executes the functionality of this <a href="../../rohd/Conditional-class.html">Conditional</a> and
+populates <code>drivenSignals</code> with all <a href="../../rohd/Logic-class.html">Logic</a>s that were driven
+during execution.</p>
+<p>The <code>drivenSignals</code> are used by the caller to determine if signals
+were driven an appropriate number of times.</p>
 </section>
 
 
@@ -74,9 +77,12 @@ execution.</p>
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">@override
-Set&lt;Logic&gt; execute() {
+void execute(Set&lt;Logic&gt; drivenSignals) {
   receiverOutput(receiver).put(driverValue(driver));
-  return {receiver};
+
+  if (!drivenSignals.contains(receiver) || receiver.value.isValid) {
+    drivenSignals.add(receiver);
+  }
 }</code></pre>
 </section>
 
@@ -109,9 +115,9 @@ Set&lt;Logic&gt; execute() {
       <a href="../../rohd/ConditionalAssign-class.html#instance-properties">Properties</a>
     </li>
     <li><a href="../../rohd/ConditionalAssign/driver.html">driver</a></li>
-    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Object/hashCode.html">hashCode</a></li>
+    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Object/hashCode.html">hashCode</a></li>
     <li><a href="../../rohd/ConditionalAssign/receiver.html">receiver</a></li>
-    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Object/runtimeType.html">runtimeType</a></li>
+    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Object/runtimeType.html">runtimeType</a></li>
 
     <li class="section-title"><a href="../../rohd/ConditionalAssign-class.html#instance-methods">Methods</a></li>
     <li class="inherited"><a href="../../rohd/Conditional/driverInput.html">driverInput</a></li>
@@ -120,13 +126,13 @@ Set&lt;Logic&gt; execute() {
     <li><a href="../../rohd/ConditionalAssign/getConditionals.html">getConditionals</a></li>
     <li><a href="../../rohd/ConditionalAssign/getDrivers.html">getDrivers</a></li>
     <li><a href="../../rohd/ConditionalAssign/getReceivers.html">getReceivers</a></li>
-    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Object/noSuchMethod.html">noSuchMethod</a></li>
+    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Object/noSuchMethod.html">noSuchMethod</a></li>
     <li class="inherited"><a href="../../rohd/Conditional/receiverOutput.html">receiverOutput</a></li>
-    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Object/toString.html">toString</a></li>
+    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Object/toString.html">toString</a></li>
     <li><a href="../../rohd/ConditionalAssign/verilogContents.html">verilogContents</a></li>
 
     <li class="section-title inherited"><a href="../../rohd/ConditionalAssign-class.html#operators">Operators</a></li>
-    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.3/dart-core/Object/operator_equals.html">operator ==</a></li>
+    <li class="inherited"><a href="https://api.dart.dev/stable/2.18.7/dart-core/Object/operator_equals.html">operator ==</a></li>
 
 
 
@@ -143,7 +149,7 @@ Set&lt;Logic&gt; execute() {
 <footer>
   <span class="no-break">
     rohd
-      0.3.2
+      0.4.1
   </span>
 
   
