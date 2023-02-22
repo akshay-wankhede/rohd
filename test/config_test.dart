@@ -38,13 +38,15 @@ void main() async {
     expect(Config.version, equals(yaml['version']));
   });
 
+  //TODO: tests for circt
+
   test('should contains ROHD version number when sv is generated.', () async {
     const version = Config.version;
 
     final mod = SimpleModule(Logic(), Logic());
     await mod.build();
 
-    final sv = mod.generateSynth();
+    final sv = mod.generateSynth(SystemVerilogSynthesizer());
 
     expect(sv, contains(version));
   });

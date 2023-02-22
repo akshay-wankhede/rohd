@@ -159,7 +159,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   String toFileContents() => _toVerilog(moduleToInstanceTypeMap);
 
   List<String> _verilogInputs() {
-    var declarations = _synthModuleDefinition.inputs
+    var declarations = synthModuleDefinition.inputs
         .map((sig) =>
             'input logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -167,7 +167,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 
   List<String> _verilogOutputs() {
-    var declarations = _synthModuleDefinition.outputs
+    var declarations = synthModuleDefinition.outputs
         .map((sig) =>
             'output logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -176,7 +176,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   String _verilogInternalNets() {
     final declarations = <String>[];
-    for (final sig in _synthModuleDefinition.internalNets) {
+    for (final sig in synthModuleDefinition.internalNets) {
       if (sig.needsDeclaration) {
         declarations.add(
             'logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)};');
@@ -196,7 +196,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   String _verilogAssignments() {
     final assignmentLines = <String>[];
-    for (var assignment in _synthModuleDefinition.assignments) {
+    for (var assignment in synthModuleDefinition.assignments) {
       assignmentLines
           .add('assign ${assignment.dst.name} = ${_srcName(assignment.src)};');
     }

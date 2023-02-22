@@ -71,7 +71,6 @@ class BusTestModule extends Module {
 
     var aShrunk = addOutput('a_shrunk', width: 3);
     var aRevShrunk = addOutput('a_revshrunk', width: 3);
-    var aReversed = addOutput('a_reversed', width: a.width);
     var aRSliced = addOutput('a_rsliced', width: 5);
     var aRange = addOutput('a_range', width: 3);
     final aBar = addOutput('a_bar', width: a.width);

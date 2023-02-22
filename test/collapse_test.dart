@@ -56,7 +56,7 @@ void main() {
   test('collapse pretty', () async {
     final mod = CollapseTestModule(Logic(), Logic());
     await mod.build();
-    final synth = mod.generateSynth();
+    final synth = mod.generateSynth(SystemVerilogSynthesizer());
 
     // File('tmp.sv').writeAsStringSync(synth);
     // print(synth);

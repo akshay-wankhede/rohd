@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 import 'package:rohd/rohd.dart';
+import 'package:rohd/src/collections/traverseable_collection.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
-import 'package:rohd/src/utilities/traverseable_collection.dart';
 import 'package:rohd/src/utilities/uniquifier.dart';
 
 /// Represents the definition of a module.
@@ -34,25 +34,24 @@ class SynthModuleDefinition {
   }
 
   @override
-  String toString() {
-    return "module name: '${module.name}'";
-  }
+  String toString() => "module name: '${module.name}'";
 
-  late final Uniquifier synthLogicNameUniquifier;
+  /// Used to uniquify any identifiers, including signal names
+  /// and module instances.
+  late final Uniquifier synthInstantiationNameUniquifier;
+
   String _getUniqueSynthLogicName(String? initialName, bool portName) {
     if (portName && initialName == null) {
       throw Exception('Port name cannot be null.');
     }
-    return synthLogicNameUniquifier.getUniqueName(
+    return synthInstantiationNameUniquifier.getUniqueName(
         initialName: initialName, reserved: portName);
   }
 
-  final Uniquifier synthSubModuleInstantiationNameUniquifier = Uniquifier();
   String _getUniqueSynthSubModuleInstantiationName(
-      String? initialName, bool reserved) {
-    return synthSubModuleInstantiationNameUniquifier.getUniqueName(
-        initialName: initialName, nullStarter: 'm', reserved: reserved);
-  }
+          String? initialName, bool reserved) =>
+      synthInstantiationNameUniquifier.getUniqueName(
+          initialName: initialName, nullStarter: 'm', reserved: reserved);
 
   SynthLogic? _getSynthLogic(Logic? logic, bool allowPortName) {
     if (logic == null) {
@@ -68,8 +67,9 @@ class SynthModuleDefinition {
     }
   }
 
+  ///TODO
   SynthModuleDefinition(this.module, {required this.ssmiBuilder}) {
-    synthLogicNameUniquifier = Uniquifier(
+    synthInstantiationNameUniquifier = Uniquifier(
         reservedNames: {...module.inputs.keys, ...module.outputs.keys});
 
     // start by traversing output signals
@@ -136,10 +136,10 @@ class SynthModuleDefinition {
           }
           assignments.add(SynthAssignment(synthDriver!, synthReceiver));
         }
-      } else if (driver == null && receiver.hasValidValue()) {
+      } else if (driver == null && receiver.value.isValid) {
         assignments.add(SynthAssignment(
             SynthLogic.ofConstant(receiver.value), synthReceiver));
-      } else if (driver == null && !receiver.isFloating()) {
+      } else if (driver == null && !receiver.value.isFloating) {
         // this is a signal that is *partially* invalid (e.g. 0b1z1x0)
         assignments.add(SynthAssignment(
             SynthLogic.ofConstant(receiver.value), synthReceiver));

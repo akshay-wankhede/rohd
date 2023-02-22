@@ -73,21 +73,16 @@ void main() {
       Vector({'a': 0xa5}, {'b': 0x5a}),
     ];
 
-    var signalToWidthMap = {'a': 8, 'b': 8};
-
-    tearDown(() {
-      Simulator.reset();
+    tearDown(() async {
+      await Simulator.reset();
     });
 
     test('native rohd sv generated', () async {
       var mod = TopModule(Logic(width: 8));
       await mod.build();
-      var simResult = SimCompare.iverilogVector(
-          MyExternalModule.testExternalVerilog +
-              mod.generateSynth(SystemVerilogSynthesizer()),
-          mod.runtimeType.toString(),
-          vectors,
-          signalToWidthMap: signalToWidthMap);
+      var simResult = SimCompare.iverilogVector(mod, vectors,
+          generatedVerilog: MyExternalModule.testExternalVerilog +
+              mod.generateSynth(SystemVerilogSynthesizer()));
       expect(simResult, equals(true));
     });
 
@@ -95,21 +90,24 @@ void main() {
       var mod = TopModule(Logic(width: 8));
       await mod.build();
       var simResult = SimCompare.iverilogVector(
-          MyExternalModule.testExternalVerilog +
-              CirctSynthesizer.convertCirctToSystemVerilog(
-                  mod.generateSynth(CirctSynthesizer())),
-          mod.runtimeType.toString(),
-          vectors,
-          signalToWidthMap: signalToWidthMap);
+        mod,
+        vectors,
+        generatedVerilog: MyExternalModule.testExternalVerilog +
+            CirctSynthesizer.convertCirctToSystemVerilog(
+                mod.generateSynth(CirctSynthesizer())),
+      );
       expect(simResult, equals(true));
     });
-  test('instantiate', () async {
-    final mod = TopModule(Logic(width: 2));
-    await mod.build();
-    final sv = mod.generateSynth();
-    expect(
-        sv,
-        contains(
-            'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+
+    //TODO circt test too
+    test('instantiate', () async {
+      final mod = TopModule(Logic(width: 2));
+      await mod.build();
+      final sv = mod.generateSynth(SystemVerilogSynthesizer());
+      expect(
+          sv,
+          contains(
+              'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+    });
   });
 }

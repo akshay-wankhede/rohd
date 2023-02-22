@@ -85,13 +85,13 @@ class NotGate extends Module
       CirctSynthesizer synthesizer) {
     assert(inputs.length == 1);
     assert(outputs.length == 1);
-    var aName = inputs[_a]!;
-    var outName = outputs[_out]!;
+    var inName = inputs[_inName]!;
+    var outName = outputs[_outName]!;
     var neg1 = synthesizer.nextTempName(parent!);
     return [
       '// $instanceName',
-      '%$neg1 = hw.constant -1 : i${a.width}',
-      '%$outName = comb.xor %$aName, %$neg1 : i${out.width}'
+      '%$neg1 = hw.constant -1 : i${_in.width}',
+      '%$outName = comb.xor %$inName, %$neg1 : i${out.width}'
     ].join('\n');
   }
 }
@@ -99,7 +99,7 @@ class NotGate extends Module
 /// A generic unary gate [Module].
 ///
 /// It always takes one input, and the output width is always 1.
-class _OneInputUnaryGate extends Module
+abstract class _OneInputUnaryGate extends Module
     with InlineSystemVerilog, FullyCombinational, CustomCirct {
   /// Name for the input port of this module.
   late final String _inName;
@@ -125,10 +125,11 @@ class _OneInputUnaryGate extends Module
   /// Constructs a unary gate for an abitrary custom functional implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When
-  /// this [Module] is in-lined as SystemVerilog, it will use [_opStr] as the
-  /// prefix to the input signal name (e.g. if [_opStr] was "&", generated
+  /// this [Module] is in-lined as SystemVerilog, it will use [_svOpStr] as the
+  /// prefix to the input signal name (e.g. if [_svOpStr] was "&", generated
   /// SystemVerilog may look like "&a").
-  _OneInputUnaryGate(this._op, this._opStr, Logic in_, {String name = 'ugate'})
+  _OneInputUnaryGate(this._op, this._svOpStr, Logic in_,
+      {String name = 'ugate'})
       : super(name: name) {
     _inName = Module.unpreferredName(in_.name);
     _outName = Module.unpreferredName('${name}_${in_.name}');
@@ -156,7 +157,7 @@ class _OneInputUnaryGate extends Module
       throw Exception('Gate has exactly one input.');
     }
     final in_ = inputs[_inName]!;
-    return '$_opStr$in_';
+    return '$_svOpStr$in_';
   }
 
   @override
@@ -168,8 +169,8 @@ class _OneInputUnaryGate extends Module
       CirctSynthesizer synthesizer) {
     assert(inputs.length == 1);
     assert(outputs.length == 1);
-    var aName = inputs[_a]!;
-    var yName = outputs[_y]!;
+    var aName = inputs[_inName]!;
+    var yName = outputs[_outName]!;
     return [
       '// $instanceName',
       _generateCirct(aName, yName, synthesizer),
@@ -389,7 +390,7 @@ abstract class _TwoInputComparisonGate extends Module
     }
     final in0 = inputs[_in0Name]!;
     final in1 = inputs[_in1Name]!;
-    return '$in0 $_opStr $in1';
+    return '$in0 $_svOpStr $in1';
   }
 
   @override
@@ -497,7 +498,7 @@ class _ShiftGate extends Module
     final in_ = inputs[_inName]!;
     final shiftAmount = inputs[_shiftAmountName]!;
     final aStr = signed ? '\$signed($in_)' : in_;
-    return '$aStr $_opStr $shiftAmount';
+    return '$aStr $_svOpStr $shiftAmount';
   }
 
   List<String> _paddingCirct(String newName, String originalName, Logic signal,
@@ -535,29 +536,29 @@ class _ShiftGate extends Module
     assert(outputs.length == 1);
 
     //TODO
-    var aName = inputs[_a]!;
-    var bName = inputs[_b]!;
-    var inputWidth = max(a.width, b.width);
+    var in_ = inputs[_inName]!;
+    var shiftAmount = inputs[_shiftAmountName]!;
+    var inputWidth = max(_in.width, _shiftAmount.width);
     var inputLines = <String>[];
-    var aWideName = aName, bWideName = bName;
-    if (a.width < inputWidth) {
+    var aWideName = in_, bWideName = shiftAmount;
+    if (_in.width < inputWidth) {
       aWideName = synthesizer.nextTempName(parent!);
       inputLines
-          .addAll(_paddingCirct(aWideName, aName, a, inputWidth, synthesizer));
+          .addAll(_paddingCirct(aWideName, in_, _in, inputWidth, synthesizer));
     }
-    if (b.width < inputWidth) {
+    if (_shiftAmount.width < inputWidth) {
       bWideName = synthesizer.nextTempName(parent!);
-      inputLines
-          .addAll(_paddingCirct(bWideName, bName, b, inputWidth, synthesizer));
+      inputLines.addAll(_paddingCirct(
+          bWideName, shiftAmount, _shiftAmount, inputWidth, synthesizer));
     }
 
-    var yName = outputs[_y]!;
+    var yName = outputs[_outName]!;
     var yWideName = yName;
     var outputLines = <String>[];
-    if (y.width < inputWidth) {
+    if (out.width < inputWidth) {
       yWideName = synthesizer.nextTempName(parent!);
       outputLines.add('%$yName = comb.extract %$yWideName from 0 :'
-          ' (i$inputWidth) -> i${y.width}');
+          ' (i$inputWidth) -> i${out.width}');
     }
 
     return [
@@ -632,8 +633,7 @@ class Modulo extends _TwoInputBitwiseGate {
   ///
   /// [in1] can be either a [Logic] or [int].
   Modulo(Logic in0, dynamic in1, {String name = 'modulo'})
-      : super((a, b) => a % b, '%', in0, in1, name: name);
-  //TODO modulo
+      : super((a, b) => a % b, '%', 'modu', in0, in1, name: name);
 }
 
 /// A two-input equality comparison module.
@@ -691,10 +691,10 @@ class AndUnary extends _OneInputUnaryGate {
   @override
   String _generateCirct(
       String aName, String yName, CirctSynthesizer synthesizer) {
-    var neg1 = synthesizer.nextTempName(parent!);
+    final neg1 = synthesizer.nextTempName(parent!);
     return [
-      '%$neg1 = hw.constant -1 : i${a.width}',
-      '%$yName = comb.icmp eq %$aName, %$neg1 : i${a.width}'
+      '%$neg1 = hw.constant -1 : i${_in.width}',
+      '%$yName = comb.icmp eq %$aName, %$neg1 : i${_in.width}'
     ].join('\n');
   }
 }
@@ -710,8 +710,8 @@ class OrUnary extends _OneInputUnaryGate {
       String aName, String yName, CirctSynthesizer synthesizer) {
     var zero = synthesizer.nextTempName(parent!);
     return [
-      '%$zero = hw.constant 0 : i${a.width}',
-      '%$yName = comb.icmp ne %$aName, %$zero : i${a.width}'
+      '%$zero = hw.constant 0 : i${_in.width}',
+      '%$yName = comb.icmp ne %$aName, %$zero : i${_in.width}'
     ].join('\n');
   }
 }
@@ -725,7 +725,7 @@ class XorUnary extends _OneInputUnaryGate {
   @override
   String _generateCirct(
       String aName, String yName, CirctSynthesizer synthesizer) {
-    return '%$yName = comb.parity %$aName : i${a.width}';
+    return '%$yName = comb.parity %$aName : i${_in.width}';
   }
 }
 
@@ -872,10 +872,10 @@ class Mux extends Module
     var controlName = inputs[_control]!;
     var d0Name = inputs[_d0]!;
     var d1Name = inputs[_d1]!;
-    var yName = outputs[_y]!;
+    var yName = outputs[_outName]!;
     return [
       '// $instanceName',
-      '%$yName = comb.mux %$controlName, %$d1Name, %$d0Name : i${y.width}'
+      '%$yName = comb.mux %$controlName, %$d1Name, %$d0Name : i${out.width}'
     ].join('\n');
   }
 }

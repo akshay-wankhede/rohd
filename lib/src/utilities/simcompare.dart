@@ -169,11 +169,9 @@ abstract class SimCompare {
 
   static bool iverilogVectorAll(
     Module module,
-    String topModule,
     List<Vector> vectors, {
     bool dontDeleteTmpFiles = false,
     bool dumpWaves = false,
-    Map<String, int> signalToWidthMap = const {},
     List<String> iverilogExtraArgs = const [],
     String? circtBinPath,
   }) {
@@ -188,36 +186,32 @@ abstract class SimCompare {
             deleteTemporaryFiles: !dontDeleteTmpFiles,
           ),
       ],
-      topModule,
+      module,
       vectors,
       dontDeleteTmpFiles: dontDeleteTmpFiles,
       dumpWaves: dumpWaves,
-      signalToWidthMap: signalToWidthMap,
       iverilogExtraArgs: iverilogExtraArgs,
     ).fold(true, (a, b) => a & b);
   }
 
   static List<bool> iverilogVectorMulti(
     List<String> generatedVerilogs,
-    String topModule,
+    Module module,
     List<Vector> vectors, {
     bool dontDeleteTmpFiles = false,
     bool dumpWaves = false,
-    Map<String, int> signalToWidthMap = const {},
     List<String> iverilogExtraArgs = const [],
-  }) {
-    return generatedVerilogs
-        .map((generatedVerilog) => iverilogVector(
-              generatedVerilog,
-              topModule,
-              vectors,
-              dontDeleteTmpFiles: dontDeleteTmpFiles,
-              dumpWaves: dumpWaves,
-              signalToWidthMap: signalToWidthMap,
-              iverilogExtraArgs: iverilogExtraArgs,
-            ))
-        .toList();
-  }
+  }) =>
+      generatedVerilogs
+          .map((generatedVerilog) => iverilogVector(
+                module,
+                vectors,
+                dontDeleteTmpFiles: dontDeleteTmpFiles,
+                dumpWaves: dumpWaves,
+                iverilogExtraArgs: iverilogExtraArgs,
+                generatedVerilog: generatedVerilog,
+              ))
+          .toList();
 
   /// Executes [vectors] against the Icarus Verilog simulator.
   static bool iverilogVector(
@@ -228,6 +222,7 @@ abstract class SimCompare {
     bool dumpWaves = false,
     List<String> iverilogExtraArgs = const [],
     bool allowWarnings = false,
+    String? generatedVerilog,
   }) {
     String signalDeclaration(String signalName) {
       final signal = module.signals.firstWhere((e) => e.name == signalName);
@@ -248,7 +243,7 @@ abstract class SimCompare {
     final moduleConnections = allSignals.map((e) => '.$e($e)').join(', ');
     final moduleInstance = '$topModule dut($moduleConnections);';
     final stimulus = vectors.map((e) => e.toTbVerilog()).join('\n');
-    final generatedVerilog = module.generateSynth();
+    generatedVerilog ??= module.generateSynth(SystemVerilogSynthesizer());
 
     // so that when they run in parallel, they dont step on each other
     final uniqueId =

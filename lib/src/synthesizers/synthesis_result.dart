@@ -10,6 +10,7 @@
 
 import 'package:meta/meta.dart';
 import 'package:rohd/rohd.dart';
+import 'package:rohd/src/synthesizers/utilities/synth_module_definition.dart';
 
 /// An object representing the output of a Synthesizer
 @immutable
@@ -26,7 +27,8 @@ abstract class SynthesisResult {
 
   /// Represents a constant computed synthesis result for [module] given
   /// the provided type mapping in [moduleToInstanceTypeMap].
-  const SynthesisResult(this.module, this.moduleToInstanceTypeMap);
+  const SynthesisResult(this.module, this.moduleToInstanceTypeMap,
+      this.synthesizer, this.synthModuleDefinition);
 
   /// Whether two implementations are identical or not
   ///
@@ -48,4 +50,32 @@ abstract class SynthesisResult {
 
   /// Generates what could go into a file
   String toFileContents();
+
+  //TODO: do we want this stuff below here visible in SynthesisResult, publicly?
+
+  final Synthesizer synthesizer;
+
+  @protected
+  final SynthModuleDefinition synthModuleDefinition;
+
+  @protected
+  String subModuleInstantiations(Map<Module, String> moduleToInstanceTypeMap) {
+    var subModuleLines = <String>[];
+    for (var subModuleInstantiation
+        in synthModuleDefinition.moduleToSubModuleInstantiationMap.values) {
+      if (synthesizer.generatesDefinition(subModuleInstantiation.module) &&
+          !moduleToInstanceTypeMap.containsKey(subModuleInstantiation.module)) {
+        throw Exception('No defined instance type found.');
+      }
+      var instanceType =
+          moduleToInstanceTypeMap[subModuleInstantiation.module] ??
+              '*NO_INSTANCE_TYPE_DEFINED*';
+      var instantiationCode =
+          subModuleInstantiation.instantiationCode(instanceType);
+      if (instantiationCode != null) {
+        subModuleLines.add(instantiationCode);
+      }
+    }
+    return subModuleLines.join('\n');
+  }
 }

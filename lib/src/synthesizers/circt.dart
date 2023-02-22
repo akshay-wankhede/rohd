@@ -120,7 +120,7 @@ class CirctSynthesizer extends Synthesizer {
       File(tmpParsedCirctFile).deleteSync();
     }
 
-    var svCode = circtResult.stdout;
+    var svCode = circtResult.stdout as String;
 
     return svCode;
   }
@@ -330,7 +330,7 @@ class _CirctSynthesisResult extends SynthesisResult {
 
       return [
         'hw.module.extern @$circtModuleName$parameterString($_inputsString) -> ($_outputsString)',
-        '  attributes { verilogName="${extModule.topModuleName}" }'
+        '  attributes { verilogName="${extModule.definitionName}" }'
       ].join('\n');
     }
 

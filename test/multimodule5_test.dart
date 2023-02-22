@@ -28,11 +28,12 @@ class TopModule extends Module {
 }
 
 void main() {
+  //TODO: circt
   test('multimodules5', () async {
     final mod = TopModule(Logic());
     await mod.build();
 
-    final sv = mod.generateSynth();
+    final sv = mod.generateSynth(SystemVerilogSynthesizer());
 
     expect(sv, contains('Passthrough'));
   });
