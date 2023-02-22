@@ -38,7 +38,7 @@ endmodule
 class TopModule extends Module {
   TopModule(Logic a) {
     a = addInput('a', a, width: a.width);
-    var b = addOutput('b', width: a.width);
+    final b = addOutput('b', width: a.width);
     b <= MyExternalModule(a, width: a.width).b;
   }
 }
@@ -48,9 +48,9 @@ class TopModule extends Module {
 void main() {
   group('instantiate', () {
     test('sv', () async {
-      var mod = TopModule(Logic(width: 2));
+      final mod = TopModule(Logic(width: 2));
       await mod.build();
-      var sv = mod.generateSynth(SystemVerilogSynthesizer());
+      final sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(
           sv,
           contains(
@@ -58,9 +58,9 @@ void main() {
     });
 
     test('circt', () async {
-      var mod = TopModule(Logic(width: 2));
+      final mod = TopModule(Logic(width: 2));
       await mod.build();
-      var sv = CirctSynthesizer.convertCirctToSystemVerilog(
+      final sv = CirctSynthesizer.convertCirctToSystemVerilog(
           mod.generateSynth(CirctSynthesizer()));
       expect(sv, contains('external_module_name #('));
       expect(sv, contains(".WIDTH(64'd2)"));
@@ -68,7 +68,7 @@ void main() {
   });
 
   group('simulate', () {
-    var vectors = [
+    final vectors = [
       Vector({'a': 0xff}, {'b': 0}),
       Vector({'a': 0xa5}, {'b': 0x5a}),
     ];
@@ -78,18 +78,18 @@ void main() {
     });
 
     test('native rohd sv generated', () async {
-      var mod = TopModule(Logic(width: 8));
+      final mod = TopModule(Logic(width: 8));
       await mod.build();
-      var simResult = SimCompare.iverilogVector(mod, vectors,
+      final simResult = SimCompare.iverilogVector(mod, vectors,
           generatedVerilog: MyExternalModule.testExternalVerilog +
               mod.generateSynth(SystemVerilogSynthesizer()));
       expect(simResult, equals(true));
     });
 
     test('circt sv generated', () async {
-      var mod = TopModule(Logic(width: 8));
+      final mod = TopModule(Logic(width: 8));
       await mod.build();
-      var simResult = SimCompare.iverilogVector(
+      final simResult = SimCompare.iverilogVector(
         mod,
         vectors,
         generatedVerilog: MyExternalModule.testExternalVerilog +

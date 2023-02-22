@@ -60,17 +60,17 @@ abstract class SynthesisResult {
 
   @protected
   String subModuleInstantiations(Map<Module, String> moduleToInstanceTypeMap) {
-    var subModuleLines = <String>[];
-    for (var subModuleInstantiation
+    final subModuleLines = <String>[];
+    for (final subModuleInstantiation
         in synthModuleDefinition.moduleToSubModuleInstantiationMap.values) {
       if (synthesizer.generatesDefinition(subModuleInstantiation.module) &&
           !moduleToInstanceTypeMap.containsKey(subModuleInstantiation.module)) {
         throw Exception('No defined instance type found.');
       }
-      var instanceType =
+      final instanceType =
           moduleToInstanceTypeMap[subModuleInstantiation.module] ??
               '*NO_INSTANCE_TYPE_DEFINED*';
-      var instantiationCode =
+      final instantiationCode =
           subModuleInstantiation.instantiationCode(instanceType);
       if (instantiationCode != null) {
         subModuleLines.add(instantiationCode);

@@ -12,9 +12,8 @@ abstract class SynthSubModuleInstantiation {
   SynthSubModuleInstantiation(this.module, this.name);
 
   @override
-  String toString() {
-    return "_SynthSubModuleInstantiation '$name', module name:'${module.name}'";
-  }
+  String toString() =>
+      "_SynthSubModuleInstantiation '$name', module name:'${module.name}'";
 
   void clearDeclaration() {
     _needsDeclaration = false;

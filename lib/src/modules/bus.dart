@@ -129,24 +129,24 @@ class BusSubset extends Module
       CirctSynthesizer synthesizer) {
     assert(inputs.length == 1);
     assert(outputs.length == 1);
-    var originalName = inputs[_original];
-    var subsetName = outputs[_subset];
+    final originalName = inputs[_original];
+    final subsetName = outputs[_subset];
 
-    var lines = <String>['// $instanceName'];
+    final lines = <String>['// $instanceName'];
 
     if (startIndex < endIndex) {
       lines.add('%$subsetName = comb.extract %$originalName from $startIndex :'
           ' (i${original.width}) -> i${subset.width}');
     } else {
-      var bitNames = <String>[];
+      final bitNames = <String>[];
       for (var i = endIndex; i <= startIndex; i++) {
-        var bitName = synthesizer.nextTempName(parent!);
+        final bitName = synthesizer.nextTempName(parent!);
         lines.add('%$bitName = comb.extract %$originalName from $i :'
             '(i${original.width}) -> i1');
         bitNames.add(bitName);
       }
-      var bitsString = bitNames.map((e) => '%$e').join(', ');
-      var widthsString = bitNames.map((e) => 'i1').join(', ');
+      final bitsString = bitNames.map((e) => '%$e').join(', ');
+      final widthsString = bitNames.map((e) => 'i1').join(', ');
       lines.add('%$subsetName = comb.concat $bitsString : $widthsString');
     }
 
@@ -221,14 +221,14 @@ class Swizzle extends Module
     assert(inputs.length == _swizzleInputs.length);
     assert(outputs.length == 1);
 
-    var outputName = outputs[_out];
+    final outputName = outputs[_out];
 
-    var nonZeroSwizzleInputs =
+    final nonZeroSwizzleInputs =
         _swizzleInputs.reversed.where((e) => e.width > 0);
 
-    var bitsString =
+    final bitsString =
         nonZeroSwizzleInputs.map((e) => '%${inputs[e.name]}').join(', ');
-    var widthsString =
+    final widthsString =
         nonZeroSwizzleInputs.map((e) => 'i${e.width}').join(', ');
 
     return [

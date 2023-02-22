@@ -69,10 +69,10 @@ class BusTestModule extends Module {
     a = addInput('a', a, width: a.width);
     b = addInput('b', b, width: b.width);
 
-    var aShrunk = addOutput('a_shrunk', width: 3);
-    var aRevShrunk = addOutput('a_revshrunk', width: 3);
-    var aRSliced = addOutput('a_rsliced', width: 5);
-    var aRange = addOutput('a_range', width: 3);
+    final aShrunk = addOutput('a_shrunk', width: 3);
+    final aRevShrunk = addOutput('a_revshrunk', width: 3);
+    final aRSliced = addOutput('a_rsliced', width: 5);
+    final aRange = addOutput('a_range', width: 3);
     final aBar = addOutput('a_bar', width: a.width);
     final aAndB = addOutput('a_and_b', width: a.width);
 

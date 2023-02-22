@@ -74,12 +74,11 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
   }
 
   String _circtAlwaysContents(Map<String, String> inputsNameMap,
-      Map<String, String> outputsNameMap, String assignOperator) {
-    return conditionals
-        .map((conditional) => conditional.circtContents(
-            inputsNameMap, outputsNameMap, assignOperator))
-        .join('\n');
-  }
+          Map<String, String> outputsNameMap, String assignOperator) =>
+      conditionals
+          .map((conditional) => conditional.circtContents(
+              inputsNameMap, outputsNameMap, assignOperator))
+          .join('\n');
 
   /// The "always" part of the `always` block when generating SystemVerilog.
   ///
@@ -114,7 +113,7 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    var remappedInoutOutputs = outputs
+    final remappedInoutOutputs = outputs
         .map((key, value) => MapEntry(key, synthesizer.nextTempName(parent!)));
     return [
       '//  $instanceName',
@@ -484,7 +483,7 @@ class Sequential extends _Always {
       return 'sv.alwaysff(posedge %${inputs[_clks[0].name]})';
     } else {
       //TODO: CIRCT only supports alwaysff with one edge?
-      String triggers =
+      final triggers =
           _clks.map((clk) => 'posedge %${inputs[clk.name]}').join(', ');
       return 'sv.always $triggers';
     }
@@ -640,9 +639,9 @@ class ConditionalAssign extends Conditional {
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    var driverName = inputsNameMap[driverInput(driver).name]!;
-    var receiverName = outputsNameMap[receiverOutput(receiver).name]!;
-    var width = receiver.width;
+    final driverName = inputsNameMap[driverInput(driver).name]!;
+    final receiverName = outputsNameMap[receiverOutput(receiver).name]!;
+    final width = receiver.width;
     return '$assignOperator %$receiverName, %$driverName : i$width';
   }
 }
@@ -865,13 +864,13 @@ ${subPadding}end
     // https://github.com/llvm/circt/blob/main/test/Conversion/ExportVerilog/sv-dialect.mlir#L299
 
     //TODO: support case statements with variables once CIRCT supports it (https://github.com/llvm/circt/issues/2908)
-    var expressionName = inputsNameMap[driverInput(expression).name];
-    var lines = <String>[
+    final expressionName = inputsNameMap[driverInput(expression).name];
+    final lines = <String>[
       'sv.casez %$expressionName : i${expression.width}',
     ];
-    for (var item in items) {
-      var conditionName = inputsNameMap[driverInput(item.value).name];
-      var caseContents = item.then
+    for (final item in items) {
+      final conditionName = inputsNameMap[driverInput(item.value).name];
+      final caseContents = item.then
           .map((conditional) => conditional.circtContents(
               inputsNameMap, outputsNameMap, assignOperator))
           .join('\n');
@@ -882,7 +881,7 @@ ${subPadding}end
       ]);
     }
     if (defaultItem != null) {
-      var defaultCaseContents = defaultItem!
+      final defaultCaseContents = defaultItem!
           .map((conditional) => conditional.circtContents(
               inputsNameMap, outputsNameMap, assignOperator))
           .join('\n');
@@ -1074,16 +1073,16 @@ ${padding}end ''');
       Map<String, String> outputsNameMap, String assignOperator) {
     var circt = '';
 
-    List<String> conditions = [];
-    String elseContents = '';
+    final conditions = <String>[];
+    var elseContents = '';
 
-    for (var iff in iffs) {
+    for (final iff in iffs) {
       if (iff is Else && iff != iffs.last) {
         throw Exception('Else must come last in an IfBlock.');
       }
 
-      var conditionName = inputsNameMap[driverInput(iff.condition).name];
-      var ifContents = iff.then
+      final conditionName = inputsNameMap[driverInput(iff.condition).name];
+      final ifContents = iff.then
           .map((conditional) => conditional.circtContents(
               inputsNameMap, outputsNameMap, assignOperator))
           .join('\n');
@@ -1091,7 +1090,7 @@ ${padding}end ''');
       if (iff is Else) {
         elseContents = ifContents;
       } else {
-        var condition = '''
+        final condition = '''
 sv.if %$conditionName {
   $ifContents
 }
@@ -1100,7 +1099,7 @@ sv.if %$conditionName {
       }
     }
 
-    for (var condition in conditions) {
+    for (final condition in conditions) {
       circt += '$condition else {';
     }
     circt += elseContents;
@@ -1212,12 +1211,12 @@ ${padding}end ''';
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    var conditionName = inputsNameMap[driverInput(condition).name];
-    var ifContents = then
+    final conditionName = inputsNameMap[driverInput(condition).name];
+    final ifContents = then
         .map((conditional) => conditional.circtContents(
             inputsNameMap, outputsNameMap, assignOperator))
         .join('\n');
-    var elseContents = orElse
+    final elseContents = orElse
         .map((conditional) => conditional.circtContents(
             inputsNameMap, outputsNameMap, assignOperator))
         .join('\n');
@@ -1299,10 +1298,10 @@ class FlipFlop extends Module with CustomSystemVerilog, CustomCirct {
     if (inputs.length != 2 || outputs.length != 1) {
       throw Exception('FlipFlop has exactly two inputs and one output.');
     }
-    var clk = inputs[_clk]!;
-    var d = inputs[_d]!;
-    var q = outputs[_q]!;
-    var tmpName = synthesizer.nextTempName(parent!);
+    final clk = inputs[_clk]!;
+    final d = inputs[_d]!;
+    final q = outputs[_q]!;
+    final tmpName = synthesizer.nextTempName(parent!);
 
     return [
       '// $instanceName',

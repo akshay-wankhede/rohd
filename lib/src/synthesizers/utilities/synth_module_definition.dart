@@ -25,7 +25,7 @@ class SynthModuleDefinition {
       return moduleToSubModuleInstantiationMap[m]!;
     } else {
       SynthSubModuleInstantiation newSSMI;
-      var instantiationName = _getUniqueSynthSubModuleInstantiationName(
+      final instantiationName = _getUniqueSynthSubModuleInstantiationName(
           m.uniqueInstanceName, m.reserveName);
       newSSMI = ssmiBuilder(m, instantiationName);
       moduleToSubModuleInstantiationMap[m] = newSSMI;
@@ -59,7 +59,7 @@ class SynthModuleDefinition {
     } else if (logicToSynthMap.containsKey(logic)) {
       return logicToSynthMap[logic]!;
     } else {
-      var newSynth = SynthLogic(
+      final newSynth = SynthLogic(
           logic, _getUniqueSynthLogicName(logic.name, allowPortName),
           renameable: !allowPortName);
       logicToSynthMap[logic] = newSynth;
@@ -73,19 +73,19 @@ class SynthModuleDefinition {
         reservedNames: {...module.inputs.keys, ...module.outputs.keys});
 
     // start by traversing output signals
-    var logicsToTraverse = TraverseableCollection<Logic>()
+    final logicsToTraverse = TraverseableCollection<Logic>()
       ..addAll(module.outputs.values);
-    for (var output in module.outputs.values) {
+    for (final output in module.outputs.values) {
       outputs.add(_getSynthLogic(output, true)!);
     }
 
     // make sure disconnected inputs are included
-    for (var input in module.inputs.values) {
+    for (final input in module.inputs.values) {
       inputs.add(_getSynthLogic(input, true)!);
     }
 
     // make sure floating modules are included
-    for (var subModule in module.subModules) {
+    for (final subModule in module.subModules) {
       getSynthSubModuleInstantiation(subModule);
       logicsToTraverse.addAll(subModule.inputs.values);
       logicsToTraverse.addAll(subModule.outputs.values);
@@ -94,18 +94,19 @@ class SynthModuleDefinition {
     // search for other modules contained within this module
 
     for (var i = 0; i < logicsToTraverse.length; i++) {
-      var receiver = logicsToTraverse[i];
-      var driver = receiver.srcConnection;
+      final receiver = logicsToTraverse[i];
+      final driver = receiver.srcConnection;
 
-      var receiverIsModuleInput = module.isInput(receiver);
-      var receiverIsModuleOutput = module.isOutput(receiver);
-      var driverIsModuleInput = driver == null ? false : module.isInput(driver);
-      var driverIsModuleOutput =
+      final receiverIsModuleInput = module.isInput(receiver);
+      final receiverIsModuleOutput = module.isOutput(receiver);
+      final driverIsModuleInput =
+          driver == null ? false : module.isInput(driver);
+      final driverIsModuleOutput =
           driver == null ? false : module.isOutput(driver);
 
-      var synthReceiver = _getSynthLogic(
+      final synthReceiver = _getSynthLogic(
           receiver, receiverIsModuleInput || receiverIsModuleOutput)!;
-      var synthDriver =
+      final synthDriver =
           _getSynthLogic(driver, driverIsModuleInput || driverIsModuleOutput);
 
       if (receiverIsModuleInput) {
@@ -116,14 +117,15 @@ class SynthModuleDefinition {
         internalNets.add(synthReceiver);
       }
 
-      var receiverIsSubModuleOutput =
+      final receiverIsSubModuleOutput =
           receiver.isOutput && (receiver.parentModule?.parent == module);
       if (receiverIsSubModuleOutput) {
-        var subModule = receiver.parentModule!;
-        var subModuleInstantiation = getSynthSubModuleInstantiation(subModule);
+        final subModule = receiver.parentModule!;
+        final subModuleInstantiation =
+            getSynthSubModuleInstantiation(subModule);
         subModuleInstantiation.outputMapping[synthReceiver] = receiver;
 
-        for (var element in subModule.inputs.values) {
+        for (final element in subModule.inputs.values) {
           if (!logicsToTraverse.contains(element)) {
             logicsToTraverse.add(element);
           }
@@ -145,11 +147,12 @@ class SynthModuleDefinition {
             SynthLogic.ofConstant(receiver.value), synthReceiver));
       }
 
-      var receiverIsSubModuleInput =
+      final receiverIsSubModuleInput =
           receiver.isInput && (receiver.parentModule?.parent == module);
       if (receiverIsSubModuleInput) {
-        var subModule = receiver.parentModule!;
-        var subModuleInstantiation = getSynthSubModuleInstantiation(subModule);
+        final subModule = receiver.parentModule!;
+        final subModuleInstantiation =
+            getSynthSubModuleInstantiation(subModule);
         subModuleInstantiation.inputMapping[synthReceiver] = receiver;
       }
     }
@@ -173,10 +176,10 @@ class SynthModuleDefinition {
     var prevAssignmentCount = 0;
     while (prevAssignmentCount != assignments.length) {
       // keep looping until it stops shrinking
-      var reducedAssignments = <SynthAssignment>[];
-      for (var assignment in assignments) {
-        var dst = assignment.dst;
-        SynthLogic src = assignment.src;
+      final reducedAssignments = <SynthAssignment>[];
+      for (final assignment in assignments) {
+        final dst = assignment.dst;
+        final src = assignment.src;
         if (!src.isConst && dst.name == src.name) {
           //TODO: is this ok? just let it continue and delete the assignment?
           throw Exception(

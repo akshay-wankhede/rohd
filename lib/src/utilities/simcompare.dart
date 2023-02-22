@@ -152,7 +152,7 @@ abstract class SimCompare {
       return _foundCirctPath;
     }
 
-    var circtResult = Process.runSync('which', ['circt-opt']);
+    final circtResult = Process.runSync('which', ['circt-opt']);
     if (circtResult.exitCode != 0) {
       if (!_shownCirctWarning) {
         print('Warning: CIRCT not found on path.');

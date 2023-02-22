@@ -63,7 +63,7 @@ void main() {
   });
 
   test('multimodules4 circt', () async {
-    var ftm = TopModule(Logic());
+    final ftm = TopModule(Logic());
     await ftm.build();
 
     // find a module with 'z' output 2 levels deep
@@ -73,7 +73,7 @@ void main() {
             .isNotEmpty)
         .isNotEmpty);
 
-    var synth = CirctSynthesizer.convertCirctToSystemVerilog(
+    final synth = CirctSynthesizer.convertCirctToSystemVerilog(
         ftm.generateSynth(CirctSynthesizer()));
 
     // "z = 1" means it correctly traversed down from inputs

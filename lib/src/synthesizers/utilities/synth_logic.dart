@@ -40,9 +40,8 @@ class SynthLogic {
         _mergedConst = constant;
 
   @override
-  String toString() {
-    return "'${isConst ? constant : name}', logic name: '${logic.name}'";
-  }
+  String toString() =>
+      "'${isConst ? constant : name}', logic name: '${logic.name}'";
 
   void clearDeclaration() {
     _needsDeclaration = false;

@@ -20,9 +20,8 @@ class CirctSynthesizer extends Synthesizer {
 
   @override
   SynthesisResult synthesize(
-      Module module, Map<Module, String> moduleToInstanceTypeMap) {
-    return _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
-  }
+          Module module, Map<Module, String> moduleToInstanceTypeMap) =>
+      _CirctSynthesisResult(module, moduleToInstanceTypeMap, this);
 
   final Map<Object, int> _tempNameCounters = {};
 
@@ -56,35 +55,34 @@ class CirctSynthesizer extends Synthesizer {
       }
     }
 
-    var portWidths = Map.fromEntries([
+    final portWidths = Map.fromEntries([
       ...inputs.keys.map((e) => MapEntry(e, module.input(e).width)),
       ...outputs.keys.map((e) => MapEntry(e, module.output(e).width))
     ]);
 
-    var receiverStr = outputs.values.map((e) => '%$e').join(', ');
-    var inputStr = inputs.entries
+    final receiverStr = outputs.values.map((e) => '%$e').join(', ');
+    final inputStr = inputs.entries
         .map((e) => '${e.key}: %${e.value}: i${portWidths[e.key]}')
         .join(', ');
-    var outputStr = outputs.keys.map((e) => '$e: i${portWidths[e]}').join(', ');
+    final outputStr =
+        outputs.keys.map((e) => '$e: i${portWidths[e]}').join(', ');
 
     var parameterString = '';
     if (module is ExternalSystemVerilogModule) {
       if (module.parameters != null && module.parameters!.isNotEmpty) {
-        parameterString = '<' +
-            module.parameters!.entries.map((e) {
-              var intValue = int.tryParse(e.value);
-              if (intValue == null) {
-                throw Exception(
-                    'CIRCT exporter only supports integer parameters for external SV modules,'
-                    ' but found ${e.value} for parameter ${e.key}');
-              }
-              return '${e.key}: i64 = $intValue';
-            }).join(', ') +
-            '>';
+        parameterString = '<${module.parameters!.entries.map((e) {
+          final intValue = int.tryParse(e.value);
+          if (intValue == null) {
+            throw Exception(
+                'CIRCT exporter only supports integer parameters for external SV modules,'
+                ' but found ${e.value} for parameter ${e.key}');
+          }
+          return '${e.key}: i64 = $intValue';
+        }).join(', ')}>';
       }
     }
 
-    var assignReciever = outputs.isEmpty ? '' : '$receiverStr = ';
+    final assignReciever = outputs.isEmpty ? '' : '$receiverStr = ';
 
     return '${assignReciever}hw.instance "$instanceName"'
         ' @$instanceType$parameterString ($inputStr) -> ($outputStr)';
@@ -92,20 +90,20 @@ class CirctSynthesizer extends Synthesizer {
 
   static String convertCirctToSystemVerilog(String circtContents,
       {String? circtBinPath, bool deleteTemporaryFiles = true}) {
-    var dir = 'tmp_circt';
-    var uniqueId = circtContents.hashCode;
-    var tmpCirctFile = '$dir/tmp_circt$uniqueId.mlir';
-    var tmpParsedCirctFile = '$dir/tmp_circt$uniqueId.out.mlir';
+    const dir = 'tmp_circt';
+    final uniqueId = circtContents.hashCode;
+    final tmpCirctFile = '$dir/tmp_circt$uniqueId.mlir';
+    final tmpParsedCirctFile = '$dir/tmp_circt$uniqueId.out.mlir';
 
     Directory(dir).createSync(recursive: true);
     File(tmpCirctFile).writeAsStringSync(circtContents);
 
-    var circtOptExecutable = [
+    final circtOptExecutable = [
       if (circtBinPath != null) circtBinPath,
       'circt-opt',
     ].join('/');
 
-    var circtResult = Process.runSync(circtOptExecutable,
+    final circtResult = Process.runSync(circtOptExecutable,
         ['-export-verilog', '-o=$tmpParsedCirctFile', tmpCirctFile]);
 
     if (circtResult.exitCode != 0) {
@@ -120,7 +118,7 @@ class CirctSynthesizer extends Synthesizer {
       File(tmpParsedCirctFile).deleteSync();
     }
 
-    var svCode = circtResult.stdout as String;
+    final svCode = circtResult.stdout as String;
 
     return svCode;
   }
@@ -145,17 +143,17 @@ mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
       CirctSynthesizer synthesizer) {
     Map<String, String> remap(Map<String, String> original,
         [int startingPoint = 0]) {
-      var entries = original.entries.toList();
-      var remappedEntries = <MapEntry<String, String>>[];
+      final entries = original.entries.toList();
+      final remappedEntries = <MapEntry<String, String>>[];
       for (var i = 0; i < original.length; i++) {
-        var entry = entries[i];
+        final entry = entries[i];
         remappedEntries.add(MapEntry(entry.key, '{{${i + startingPoint}}}'));
       }
       return Map.fromEntries(remappedEntries);
     }
 
-    var remappedInputs = remap(inputs);
-    var remappedOutputs = remap(outputs, inputs.length);
+    final remappedInputs = remap(inputs);
+    final remappedOutputs = remap(outputs, inputs.length);
     var sv = instantiationVerilog(
         instanceType, instanceName, remappedInputs, remappedOutputs);
 
@@ -163,24 +161,24 @@ mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
     sv = sv.replaceAll(RegExp(r'//.*\n'), '');
     sv = sv.replaceAll('\n', '  ');
 
-    var arguments =
+    final arguments =
         [...inputs.values, ...outputs.values].map((e) => '%$e').join(', ');
-    var widths = [
+    final widths = [
       ...inputs.keys.map((e) => input(e).width),
       ...outputs.keys.map((e) => output(e).width)
     ].map((e) => 'i$e').join(', ');
 
     //TODO: is it really necessary to define local logic's here?
-    var outputDeclarations = outputs.entries.map((e) {
-      var tmpName = synthesizer.nextTempName(parent!);
-      var width = output(e.key).width;
+    final outputDeclarations = outputs.entries.map((e) {
+      final tmpName = synthesizer.nextTempName(parent!);
+      final width = output(e.key).width;
       return [
         '%$tmpName = sv.reg : !hw.inout<i$width>',
         '%${e.value} = sv.read_inout %$tmpName : !hw.inout<i$width>'
       ].join('\n');
     }).join('\n');
 
-    var circtOut = [
+    final circtOut = [
       outputDeclarations,
       'sv.verbatim "$sv" ($arguments) : $widths',
     ].join('\n');
@@ -206,7 +204,7 @@ class _CirctSynthesisResult extends SynthesisResult {
             moduleToInstanceTypeMap,
             synthesizer,
             SynthModuleDefinition(module,
-                ssmiBuilder: (Module m, String instantiationName) =>
+                ssmiBuilder: (m, instantiationName) =>
                     CirctSynthSubModuleInstantiation(
                         m, instantiationName, synthesizer))) {
     _inputsString = _circtInputs();
@@ -230,22 +228,21 @@ class _CirctSynthesisResult extends SynthesisResult {
   }
 
   String _circtModuleContents(Map<Module, String> moduleToInstanceTypeMap,
-      CirctSynthesizer synthesizer, Module module) {
-    return [
-      _circtAssignments(synthesizer, module),
-      subModuleInstantiations(moduleToInstanceTypeMap),
-    ].join('\n');
-  }
+          CirctSynthesizer synthesizer, Module module) =>
+      [
+        _circtAssignments(synthesizer, module),
+        subModuleInstantiations(moduleToInstanceTypeMap),
+      ].join('\n');
 
   String _circtAssignments(CirctSynthesizer synthesizer, Module module) {
-    var assignmentLines = <String>[];
-    for (var assignment in synthModuleDefinition.assignments) {
-      var tmpName = synthesizer.nextTempName(module);
-      var width = assignment.dst.width;
+    final assignmentLines = <String>[];
+    for (final assignment in synthModuleDefinition.assignments) {
+      final tmpName = synthesizer.nextTempName(module);
+      final width = assignment.dst.width;
 
       String srcName;
       if (assignment.src.isConst) {
-        var constant = assignment.src.constant;
+        final constant = assignment.src.constant;
         if (constant.isValid) {
           //TODO: need to handle potential BigInt?
           srcName = synthesizer.nextTempName(module);
@@ -260,7 +257,7 @@ class _CirctSynthesisResult extends SynthesisResult {
         srcName = _referenceName(assignment.src);
       }
 
-      var dstName = assignment.dst.name;
+      final dstName = assignment.dst.name;
       assignmentLines.add([
         '%$tmpName = sv.reg : !hw.inout<i$width>',
         'sv.assign %$tmpName, %$srcName : i$width',
@@ -270,30 +267,17 @@ class _CirctSynthesisResult extends SynthesisResult {
     return assignmentLines.join('\n');
   }
 
-  String _circtInputs() {
-    return synthModuleDefinition.inputs
-        .map((sig) => '%${sig.name}: i${sig.logic.width}')
-        .join(', ');
-  }
+  String _circtInputs() => synthModuleDefinition.inputs
+      .map((sig) => '%${sig.name}: i${sig.logic.width}')
+      .join(', ');
 
-  String _circtOutputs() {
-    return synthModuleDefinition.outputs
-        .map((sig) => '${sig.name}: i${sig.logic.width}')
-        .join(', ');
-  }
+  String _circtOutputs() => synthModuleDefinition.outputs
+      .map((sig) => '${sig.name}: i${sig.logic.width}')
+      .join(', ');
 
-  String _circtOutputFooter() {
-    return synthModuleDefinition.outputs.isEmpty
-        ? ''
-        : 'hw.output ' +
-            synthModuleDefinition.outputs
-                .map((e) => '%' + _referenceName(e))
-                .join(', ') +
-            ' : ' +
-            synthModuleDefinition.outputs
-                .map((e) => 'i${e.logic.width}')
-                .join(', ');
-  }
+  String _circtOutputFooter() => synthModuleDefinition.outputs.isEmpty
+      ? ''
+      : 'hw.output ${synthModuleDefinition.outputs.map((e) => '%${_referenceName(e)}').join(', ')} : ${synthModuleDefinition.outputs.map((e) => 'i${e.logic.width}').join(', ')}';
 
   @override
   int get matchHashCode =>
@@ -311,21 +295,18 @@ class _CirctSynthesisResult extends SynthesisResult {
       other._moduleContentsString == _moduleContentsString;
 
   @override
-  String toFileContents() {
-    return _toCirct(moduleToInstanceTypeMap);
-  }
+  String toFileContents() => _toCirct(moduleToInstanceTypeMap);
 
   String _toCirct(Map<Module, String> moduleToInstanceTypeMap) {
-    var circtModuleName = moduleToInstanceTypeMap[module];
+    final circtModuleName = moduleToInstanceTypeMap[module];
 
     if (module is ExternalSystemVerilogModule) {
-      var extModule = module as ExternalSystemVerilogModule;
+      final extModule = module as ExternalSystemVerilogModule;
 
       var parameterString = '';
       if (extModule.parameters != null && extModule.parameters!.isNotEmpty) {
-        parameterString = '<' +
-            extModule.parameters!.keys.map((e) => '$e: i64').join(', ') +
-            '>';
+        parameterString =
+            '<${extModule.parameters!.keys.map((e) => '$e: i64').join(', ')}>';
       }
 
       return [
@@ -345,8 +326,7 @@ class _CirctSynthesisResult extends SynthesisResult {
 
 class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
   CirctSynthesizer synthesizer;
-  CirctSynthSubModuleInstantiation(Module module, String name, this.synthesizer)
-      : super(module, name);
+  CirctSynthSubModuleInstantiation(super.module, super.name, this.synthesizer);
 
   @override
   String? instantiationCode(String instanceType) {
@@ -355,21 +335,21 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
     // if all the outputs have zero-width, we don't need to generate anything at all
     // but if there's no outputs, then its ok to keep it
     if (outputMapping.isNotEmpty) {
-      var totalOutputWidth =
+      final totalOutputWidth =
           outputMapping.values.map((e) => e.width).reduce((a, b) => a + b);
       if (totalOutputWidth == 0) return null;
     }
 
     // collect consts for CIRCT, since you can't in-line them
-    var constMap = <SynthLogic, String>{};
-    var constDefinitions = <String>[];
-    for (var inputSynthLogic in inputMapping.keys) {
+    final constMap = <SynthLogic, String>{};
+    final constDefinitions = <String>[];
+    for (final inputSynthLogic in inputMapping.keys) {
       if (inputSynthLogic.isConst) {
         if (inputSynthLogic.logic.width == 0) {
           // shouldn't be using zero-width constants anywhere, omit them
           constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
         } else {
-          var constName = synthesizer.nextTempName(module.parent!);
+          final constName = synthesizer.nextTempName(module.parent!);
           //TODO: does this really need to be BigInt?
           constDefinitions.add('%$constName = hw.constant '
               '${inputSynthLogic.constant.toBigInt()} : '
@@ -392,8 +372,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
   }
 
   String _instantiationCirct(String instanceType, Map<String, String> inputs,
-      Map<String, String> outputs) {
-    return CirctSynthesizer.instantiationCirctWithParameters(
-        module, instanceType, name, inputs, outputs, synthesizer);
-  }
+          Map<String, String> outputs) =>
+      CirctSynthesizer.instantiationCirctWithParameters(
+          module, instanceType, name, inputs, outputs, synthesizer);
 }

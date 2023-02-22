@@ -10,8 +10,6 @@
 
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/synthesizers/utilities/utilities.dart';
-import 'package:rohd/src/collections/traverseable_collection.dart';
-import 'package:rohd/src/utilities/uniquifier.dart';
 
 /// A [Synthesizer] which generates equivalent SystemVerilog as the
 /// given [Module].
@@ -76,9 +74,8 @@ class SystemVerilogSynthesizer extends Synthesizer {
 
   @override
   SynthesisResult synthesize(
-      Module module, Map<Module, String> moduleToInstanceTypeMap) {
-    return _SystemVerilogSynthesisResult(module, moduleToInstanceTypeMap, this);
-  }
+          Module module, Map<Module, String> moduleToInstanceTypeMap) =>
+      _SystemVerilogSynthesisResult(module, moduleToInstanceTypeMap, this);
 }
 
 /// Allows a [Module] to define a custom implementation of SystemVerilog to be
@@ -159,7 +156,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   String toFileContents() => _toVerilog(moduleToInstanceTypeMap);
 
   List<String> _verilogInputs() {
-    var declarations = synthModuleDefinition.inputs
+    final declarations = synthModuleDefinition.inputs
         .map((sig) =>
             'input logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -167,7 +164,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 
   List<String> _verilogOutputs() {
-    var declarations = synthModuleDefinition.outputs
+    final declarations = synthModuleDefinition.outputs
         .map((sig) =>
             'output logic ${SystemVerilogSynthesizer.definitionName(sig.logic.width, sig.name)}')
         .toList();
@@ -187,7 +184,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   static String _srcName(SynthLogic src) {
     if (src.isConst) {
-      var constant = src.constant;
+      final constant = src.constant;
       return constant.toString();
     } else {
       return src.name;
@@ -196,20 +193,19 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
   String _verilogAssignments() {
     final assignmentLines = <String>[];
-    for (var assignment in synthModuleDefinition.assignments) {
+    for (final assignment in synthModuleDefinition.assignments) {
       assignmentLines
           .add('assign ${assignment.dst.name} = ${_srcName(assignment.src)};');
     }
     return assignmentLines.join('\n');
   }
 
-  String _verilogModuleContents(Map<Module, String> moduleToInstanceTypeMap) {
-    return [
-      _verilogInternalNets(),
-      _verilogAssignments(),
-      subModuleInstantiations(moduleToInstanceTypeMap),
-    ].where((element) => element.isNotEmpty).join('\n');
-  }
+  String _verilogModuleContents(Map<Module, String> moduleToInstanceTypeMap) =>
+      [
+        _verilogInternalNets(),
+        _verilogAssignments(),
+        subModuleInstantiations(moduleToInstanceTypeMap),
+      ].where((element) => element.isNotEmpty).join('\n');
 
   String _verilogPorts() => [
         ..._verilogInputs(),
@@ -230,11 +226,8 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
 
 //TODO:typo Veriog
 class SystemVeriogSynthModuleDefinition extends SynthModuleDefinition {
-  SystemVeriogSynthModuleDefinition(Module module)
-      : super(module,
-            ssmiBuilder: (Module m, String instantiationName) =>
-                SystemVerilogSynthSubModuleInstantiation(
-                    m, instantiationName)) {
+  SystemVeriogSynthModuleDefinition(super.module)
+      : super(ssmiBuilder: SystemVerilogSynthSubModuleInstantiation.new) {
     _collapseChainableModules();
   }
 
@@ -302,7 +295,7 @@ class SystemVeriogSynthModuleDefinition extends SynthModuleDefinition {
             singleUseNames.contains(
                 submoduleInstantiation.outputMapping.keys.first.name));
 
-    var synthLogicNameToInlineableSynthSubmoduleMap =
+    final synthLogicNameToInlineableSynthSubmoduleMap =
         <String, SystemVerilogSynthSubModuleInstantiation>{};
     for (final submoduleInstantiation
         in singleUsageInlineableSubmoduleInstantiations) {
@@ -327,8 +320,7 @@ class SystemVerilogSynthSubModuleInstantiation
   Map<String, SystemVerilogSynthSubModuleInstantiation>?
       synthLogicNameToInlineableSynthSubmoduleMap;
 
-  SystemVerilogSynthSubModuleInstantiation(Module module, String name)
-      : super(module, name);
+  SystemVerilogSynthSubModuleInstantiation(super.module, super.name);
 
   Map<String, String> _moduleInputsMap() {
     return inputMapping.map((synthLogic, logic) => MapEntry(
@@ -340,11 +332,8 @@ class SystemVerilogSynthSubModuleInstantiation
     //TODO: this logic is less efficient than it could be, multiple _srcName calls...
   }
 
-  String inlineVerilog() {
-    return '(' +
-        (module as InlineSystemVerilog).inlineVerilog(_moduleInputsMap()) +
-        ')';
-  }
+  String inlineVerilog() =>
+      '(${(module as InlineSystemVerilog).inlineVerilog(_moduleInputsMap())})';
 
   @override
   String? instantiationCode(String instanceType) {

@@ -18,13 +18,12 @@ class CirctMod extends Module with CustomCirct {
 
   @override
   String instantiationCirct(
-      String instanceType,
-      String instanceName,
-      Map<String, String> inputs,
-      Map<String, String> outputs,
-      CirctSynthesizer synthesizer) {
-    return 'none';
-  }
+          String instanceType,
+          String instanceName,
+          Map<String, String> inputs,
+          Map<String, String> outputs,
+          CirctSynthesizer synthesizer) =>
+      'none';
 }
 
 class TopMod extends Module {
@@ -36,7 +35,7 @@ class TopMod extends Module {
 
 void main() {
   test('unsupported exception', () async {
-    var mod = TopMod(Logic());
+    final mod = TopMod(Logic());
     await mod.build();
     expect(
         () => mod.generateSynth(SystemVerilogSynthesizer()), throwsException);

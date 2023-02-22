@@ -6,7 +6,5 @@ class SynthAssignment {
   SynthAssignment(this.src, this.dst);
 
   @override
-  String toString() {
-    return '${dst.name} <= $src';
-  }
+  String toString() => '${dst.name} <= $src';
 }

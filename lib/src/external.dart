@@ -35,23 +35,21 @@ abstract class ExternalSystemVerilogModule extends Module
 
   @override
   String instantiationVerilog(String instanceType, String instanceName,
-      Map<String, String> inputs, Map<String, String> outputs) {
-    return SystemVerilogSynthesizer.instantiationVerilogWithParameters(
-        this, definitionName, instanceName, inputs, outputs,
-        parameters: parameters, forceStandardInstantiation: true);
-  }
+          Map<String, String> inputs, Map<String, String> outputs) =>
+      SystemVerilogSynthesizer.instantiationVerilogWithParameters(
+          this, definitionName, instanceName, inputs, outputs,
+          parameters: parameters, forceStandardInstantiation: true);
 
   @override
   String instantiationCirct(
-      String instanceType,
-      String instanceName,
-      Map<String, String> inputs,
-      Map<String, String> outputs,
-      CirctSynthesizer synthesizer) {
-    return CirctSynthesizer.instantiationCirctWithParameters(
-        this, instanceType, instanceName, inputs, outputs, synthesizer,
-        parameters: parameters, forceStandardInstantiation: true);
-  }
+          String instanceType,
+          String instanceName,
+          Map<String, String> inputs,
+          Map<String, String> outputs,
+          CirctSynthesizer synthesizer) =>
+      CirctSynthesizer.instantiationCirctWithParameters(
+          this, instanceType, instanceName, inputs, outputs, synthesizer,
+          parameters: parameters, forceStandardInstantiation: true);
 }
 
 /// Deprecated - Use [ExternalSystemVerilogModule] instead.

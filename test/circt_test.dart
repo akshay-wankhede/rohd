@@ -18,9 +18,8 @@ class SVMod extends Module with CustomSystemVerilog {
 
   @override
   String instantiationVerilog(String instanceType, String instanceName,
-      Map<String, String> inputs, Map<String, String> outputs) {
-    return 'none';
-  }
+          Map<String, String> inputs, Map<String, String> outputs) =>
+      'none';
 }
 
 class TopModSV extends Module {
@@ -34,20 +33,20 @@ class CirctMod extends Module {
   CirctMod(Logic a, Logic b) : super(name: 'circtmod') {
     a = addInput('a', a);
     b = addInput('b', b);
-    var notA = addOutput('notA');
+    final notA = addOutput('notA');
     notA <= ~a;
   }
 }
 
 void main() {
   test('unsupported exception', () async {
-    var mod = TopModSV(Logic());
+    final mod = TopModSV(Logic());
     await mod.build();
     expect(() => mod.generateSynth(CirctSynthesizer()), throwsException);
   });
 
   test('simple gen', () async {
-    var mod = CirctMod(Logic(), Logic());
+    final mod = CirctMod(Logic(), Logic());
     await mod.build();
     mod.generateSynth(CirctSynthesizer());
   });
