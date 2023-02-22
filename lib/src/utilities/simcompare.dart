@@ -174,6 +174,7 @@ abstract class SimCompare {
     bool dumpWaves = false,
     List<String> iverilogExtraArgs = const [],
     String? circtBinPath,
+    bool allowWarnings = false,
   }) {
     circtBinPath = circtBinPath ?? _defaultCirctPath();
     return iverilogVectorMulti(
@@ -191,6 +192,7 @@ abstract class SimCompare {
       dontDeleteTmpFiles: dontDeleteTmpFiles,
       dumpWaves: dumpWaves,
       iverilogExtraArgs: iverilogExtraArgs,
+      allowWarnings: allowWarnings,
     ).fold(true, (a, b) => a & b);
   }
 
@@ -201,16 +203,15 @@ abstract class SimCompare {
     bool dontDeleteTmpFiles = false,
     bool dumpWaves = false,
     List<String> iverilogExtraArgs = const [],
+    bool allowWarnings = false,
   }) =>
       generatedVerilogs
-          .map((generatedVerilog) => iverilogVector(
-                module,
-                vectors,
-                dontDeleteTmpFiles: dontDeleteTmpFiles,
-                dumpWaves: dumpWaves,
-                iverilogExtraArgs: iverilogExtraArgs,
-                generatedVerilog: generatedVerilog,
-              ))
+          .map((generatedVerilog) => iverilogVector(module, vectors,
+              dontDeleteTmpFiles: dontDeleteTmpFiles,
+              dumpWaves: dumpWaves,
+              iverilogExtraArgs: iverilogExtraArgs,
+              generatedVerilog: generatedVerilog,
+              allowWarnings: allowWarnings))
           .toList();
 
   /// Executes [vectors] against the Icarus Verilog simulator.

@@ -124,7 +124,7 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
           inputs, remappedInoutOutputs, _circtAssignOperator()),
       '}',
       ...outputs.entries.map((e) => '%${e.value} = '
-          'sv.read_inout %${remappedInoutOutputs[output(e.key).name]} : !hw.inout<i${output(e.key).width}>') //TODO: looks wrong?
+          'sv.read_inout %${remappedInoutOutputs[output(e.key).name]} : !hw.inout<i${output(e.key).width}>'), //TODO: looks wrong?
     ].join('\n');
   }
 }
