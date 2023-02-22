@@ -28,7 +28,8 @@ abstract class DelegatingCustomFunctionalityModule extends Module
 
 /// An object capable of converting a module into some new output format
 abstract class Synthesizer {
-  /// Determines whether [module] needs a separate definition or can just be described in-line.
+  /// Determines whether [module] needs a separate definition or can just be
+  /// described in-line.
   bool generatesDefinition(Module module) => module is! CustomFunctionality;
 
   /// Synthesizes [module] into a [SynthesisResult], given the mapping in

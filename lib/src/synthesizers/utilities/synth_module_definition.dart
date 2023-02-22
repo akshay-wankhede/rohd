@@ -160,17 +160,6 @@ class SynthModuleDefinition {
     _collapseAssignments();
   }
 
-  //TODO: collapse in-line assignments where the driver is equal to eliminate duplicates (decrease verbosity)
-  //  for example, merge these two:
-  //      assign out = {b,a};  // swizzle_0
-  //      assign out_0 = {b,a};  // swizzle
-  // void _collapseEquivalentInlineModules() {
-  //   //WARNING: do not collapse non-renameable outputs directly, create a buffer signal
-  //   //  maybe do this before collapsing assignments, always add a buffer, then let assignment collapsing handle it?
-
-  //   // this can be easily done using existing merge capabilities for synthlogic?
-  // }
-
   void _collapseAssignments() {
     // there might be more assign statements than necessary, so let's ditch them
     var prevAssignmentCount = 0;

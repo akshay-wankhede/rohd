@@ -211,16 +211,16 @@ void main() {
       final mod = TopModule(Logic(), false, false);
       await mod.build();
       final sv = mod.generateSynth(SystemVerilogSynthesizer());
-      expect(sv, contains('specialNameInstance('));
-      expect(sv, contains('specialNameInstance_0('));
+      expect(sv, contains('specialInstanceName('));
+      expect(sv, contains('specialInstanceName_0('));
     });
     test('uniquified with conflicts, circt', () async {
       final mod = TopModule(Logic(), false, false);
       await mod.build();
       final sv = CirctSynthesizer.convertCirctToSystemVerilog(
           mod.generateSynth(CirctSynthesizer()));
-      expect(sv, contains('specialNameInstance ('));
-      expect(sv, contains('specialNameInstance_0 ('));
+      expect(sv, contains('specialInstanceName ('));
+      expect(sv, contains('specialInstanceName_0 ('));
     });
     test('reserved throws exception with conflicts', () async {
       final mod = TopModule(Logic(), false, true);

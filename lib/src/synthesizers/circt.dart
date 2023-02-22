@@ -124,6 +124,7 @@ class CirctSynthesizer extends Synthesizer {
   }
 }
 
+///TODO
 mixin CustomCirct on Module implements CustomFunctionality {
   String instantiationCirct(
       String instanceType,
@@ -133,6 +134,7 @@ mixin CustomCirct on Module implements CustomFunctionality {
       CirctSynthesizer synthesizer);
 }
 
+///TODO
 mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
   @override
   String instantiationCirct(
@@ -277,7 +279,9 @@ class _CirctSynthesisResult extends SynthesisResult {
 
   String _circtOutputFooter() => synthModuleDefinition.outputs.isEmpty
       ? ''
-      : 'hw.output ${synthModuleDefinition.outputs.map((e) => '%${_referenceName(e)}').join(', ')} : ${synthModuleDefinition.outputs.map((e) => 'i${e.logic.width}').join(', ')}';
+      : 'hw.output'
+          ' ${synthModuleDefinition.outputs.map((e) => '%${_referenceName(e)}').join(', ')} :'
+          ' ${synthModuleDefinition.outputs.map((e) => 'i${e.logic.width}').join(', ')}';
 
   @override
   int get matchHashCode =>

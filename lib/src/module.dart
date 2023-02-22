@@ -614,11 +614,15 @@ abstract class Module {
   }
 
   /// Returns a synthesized version of this [Module] using [synthesizer].
-  String generateSynth(Synthesizer synthesizer) {
-    //TODO: to prevent API from breaking, default to SV
+  ///
+  /// If no [synthesizer] is provided, a default [SystemVerilogSynthesizer] is
+  /// used instead.
+  String generateSynth([Synthesizer? synthesizer]) {
     if (!_hasBuilt) {
       throw ModuleNotBuiltException();
     }
+
+    synthesizer ??= SystemVerilogSynthesizer();
 
     final synthHeader = '''
 // 

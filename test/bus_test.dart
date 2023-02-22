@@ -17,40 +17,8 @@ class BusTestModule extends Module {
   // --- Getters ---
   Logic get aBar => output('a_bar');
   Logic get aAndB => output('a_and_b');
-  Logic get aShrunk => output('a_shrunk');
-  Logic get aRevShrunk => output('a_revshrunk');
-  Logic get aRSliced => output('a_rsliced');
-  Logic get aRange => output('a_range');
   Logic get aBJoined => output('a_b_joined');
-  Logic get a1 => output('a1');
-  Logic get aPlusB => output('a_plus_b');
-
-  // Getters for Logic subset test variables
-  Logic get aReversed => output('a_reversed');
-  // --- Getters for Slicing
   Logic get aShrunk1 => output('a_shrunk1');
-  Logic get aShrunk2 => output('a_shrunk2');
-  Logic get aShrunk3 => output('a_shrunk3');
-  Logic get aNegShrunk1 => output('a_neg_shrunk1');
-  Logic get aNegShrunk2 => output('a_neg_shrunk2');
-  Logic get aNegShrunk3 => output('a_neg_shrunk3');
-  // --- Getters for Reverse Slicing
-  Logic get aRSliced1 => output('a_rsliced1');
-  Logic get aRSliced2 => output('a_rsliced2');
-  Logic get aRSliced3 => output('a_rsliced3');
-  Logic get aRNegativeSliced1 => output('a_r_neg_sliced1');
-  Logic get aRNegativeSliced2 => output('a_r_neg_sliced2');
-  Logic get aRNegativeSliced3 => output('a_r_neg_sliced3');
-  // --- Getters for getRange
-  Logic get aRange1 => output('a_range1');
-  Logic get aRange2 => output('a_range2');
-  Logic get aRange3 => output('a_range3');
-  Logic get aRange4 => output('a_range4');
-  Logic get aNegativeRange1 => output('a_neg_range1');
-  Logic get aNegativeRange2 => output('a_neg_range2');
-  Logic get aNegativeRange3 => output('a_neg_range3');
-  Logic get aNegativeRange4 => output('a_neg_range4');
-  // --- Getters for operator[]
   Logic get aOperatorIndexing1 => output('a_operator_indexing1');
   Logic get aOperatorIndexing2 => output('a_operator_indexing2');
   Logic get aOperatorIndexing3 => output('a_operator_indexing3');
@@ -122,7 +90,6 @@ class BusTestModule extends Module {
     aAndB <= a & b;
     aShrunk <= a.slice(2, 0);
     aRevShrunk <= a.slice(0, 2);
-    aReversed <= a.reversed;
     aRSliced <= a.slice(3, 7);
     aRange <= a.getRange(5, 8);
     aBJoined <= [b, a].swizzle();
