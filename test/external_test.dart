@@ -16,7 +16,7 @@ class MyExternalModule extends ExternalSystemVerilogModule {
   Logic get b => output('b');
   MyExternalModule(Logic a, {int width = 2})
       : super(
-            topModuleName: 'external_module_name',
+            definitionName: 'external_module_name',
             parameters: {'WIDTH': '$width'}) {
     addInput('a', a, width: width);
     addOutput('b', width: width);
@@ -103,5 +103,13 @@ void main() {
           signalToWidthMap: signalToWidthMap);
       expect(simResult, equals(true));
     });
+  test('instantiate', () async {
+    final mod = TopModule(Logic(width: 2));
+    await mod.build();
+    final sv = mod.generateSynth();
+    expect(
+        sv,
+        contains(
+            'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
   });
 }

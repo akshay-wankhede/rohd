@@ -15,7 +15,7 @@ import 'package:test/test.dart';
 const allLv = [LogicValue.zero, LogicValue.one, LogicValue.x, LogicValue.z];
 
 // shorten some names to make tests read better
-final lv = LogicValue.ofString;
+const lv = LogicValue.ofString;
 LogicValue large(LogicValue lv) => LogicValue.filled(100, lv);
 
 void main() {
@@ -81,15 +81,18 @@ void main() {
       expect(LogicValue.z.toString(), equals("1'bz"));
       expect(LogicValue.one.toBool(), equals(true));
       expect(LogicValue.zero.toBool(), equals(false));
-      expect(() => LogicValue.x.toBool(), throwsA(isA<Exception>()));
-      expect(() => LogicValue.z.toBool(), throwsA(isA<Exception>()));
+      expect(LogicValue.x.toBool, throwsA(isA<Exception>()));
+      expect(LogicValue.z.toBool, throwsA(isA<Exception>()));
       expect(LogicValue.one.toInt(), equals(1));
       expect(LogicValue.zero.toInt(), equals(0));
-      expect(() => LogicValue.x.toInt(), throwsA(isA<Exception>()));
-      expect(() => LogicValue.z.toInt(), throwsA(isA<Exception>()));
+      expect(LogicValue.x.toInt, throwsA(isA<Exception>()));
+      expect(LogicValue.z.toInt, throwsA(isA<Exception>()));
       expect(LogicValue.ofString(''), equals(LogicValue.ofInt(1, 0)));
       expect(
           <LogicValue>[].swizzle(), equals(LogicValue.ofBigInt(BigInt.two, 0)));
+    });
+    test('big unsigned int string', () {
+      expect(LogicValue.ofString('1' * 64), equals(LogicValue.ofInt(-1, 64)));
     });
     test('unary', () {
       expect(LogicValue.one.isValid, equals(true));
@@ -186,13 +189,9 @@ void main() {
           LogicValue.isPosedge(LogicValue.one, LogicValue.z,
               ignoreInvalid: true),
           equals(false));
-      expect(
-          () => LogicValue.isPosedge(LogicValue.x, LogicValue.one,
-              ignoreInvalid: false),
+      expect(() => LogicValue.isPosedge(LogicValue.x, LogicValue.one),
           throwsA(isA<Exception>()));
-      expect(
-          () => LogicValue.isPosedge(LogicValue.one, LogicValue.z,
-              ignoreInvalid: false),
+      expect(() => LogicValue.isPosedge(LogicValue.one, LogicValue.z),
           throwsA(isA<Exception>()));
     });
     test('isNegEdge', () {
@@ -208,13 +207,9 @@ void main() {
           LogicValue.isNegedge(LogicValue.one, LogicValue.z,
               ignoreInvalid: true),
           equals(false));
-      expect(
-          () => LogicValue.isNegedge(LogicValue.x, LogicValue.one,
-              ignoreInvalid: false),
+      expect(() => LogicValue.isNegedge(LogicValue.x, LogicValue.one),
           throwsA(isA<Exception>()));
-      expect(
-          () => LogicValue.isNegedge(LogicValue.one, LogicValue.z,
-              ignoreInvalid: false),
+      expect(() => LogicValue.isNegedge(LogicValue.one, LogicValue.z),
           throwsA(isA<Exception>()));
     });
   });
@@ -272,12 +267,19 @@ void main() {
           equals(LogicValue.of([LogicValue.zero, LogicValue.zero])));
     });
   });
+
+  test('LogicValue.of example', () {
+    final it = [LogicValue.zero, LogicValue.x, LogicValue.ofString('01xz')];
+    final lv = LogicValue.of(it);
+    expect(lv.toString(), equals("6'b01xzx0"));
+  });
+
   group('unary operations (including "to")', () {
     test('toMethods', () {
       expect(
           // toString
           LogicValue.ofString('0').toString(),
-          equals('1\'h0'));
+          equals("1'h0"));
       expect(
           // toList
           LogicValue.ofString('0101').toList(),
@@ -326,9 +328,17 @@ void main() {
           () => LogicValue.ofString('0101')[10],
           throwsA(isA<IndexError>()));
       expect(
-          // index - negative
-          () => LogicValue.ofString('0101')[-1],
+          // index - out of range
+          () => LogicValue.ofString('0101')[-5],
           throwsA(isA<IndexError>()));
+      expect(
+          // index - negative
+          LogicValue.ofString('0111')[-1],
+          equals(LogicValue.zero));
+      expect(
+          // index - negative
+          LogicValue.ofString('0100')[-2],
+          equals(LogicValue.one));
       expect(
           // reversed
           LogicValue.ofString('0101').reversed,
@@ -338,9 +348,30 @@ void main() {
           LogicValue.ofString('0101').getRange(0, 2),
           equals(LogicValue.ofString('01')));
       expect(
-          // getRange - bad inputs start < 0
-          () => LogicValue.ofString('0101').getRange(-2, 1),
+          // getRange - slice from range 1
+          LogicValue.ofString('0101').getRange(1),
+          equals(LogicValue.ofString('010')));
+      expect(
+          // getRange - slice from negative range
+          LogicValue.ofString('0101').getRange(-2),
+          equals(LogicValue.ofString('01')));
+      expect(
+          // getRange - negative end index and start < end
+          LogicValue.ofString('0101').getRange(1, -2),
+          LogicValue.zero);
+      expect(
+          // getRange - negative end index and start < end
+          LogicValue.ofString('0101').getRange(-3, 4),
+          equals(LogicValue.ofString('010')));
+      expect(
+          // getRange - negative end index and start > end - error! start must
+          // be less than end
+          () => LogicValue.ofString('0101').getRange(-1, -2),
           throwsA(isA<Exception>()));
+      expect(
+          // getRange - same index results zero width value
+          LogicValue.ofString('0101').getRange(-1, -1),
+          LogicValue.ofString(''));
       expect(
           // getRange - bad inputs start > end
           () => LogicValue.ofString('0101').getRange(2, 1),
@@ -351,8 +382,14 @@ void main() {
           throwsA(isA<Exception>()));
       expect(LogicValue.ofString('xz01').slice(2, 1),
           equals(LogicValue.ofString('z0')));
+      expect(LogicValue.ofString('xz01').slice(-2, -3),
+          equals(LogicValue.ofString('z0')));
       expect(LogicValue.ofString('xz01').slice(1, 3),
           equals(LogicValue.ofString('0zx')));
+      expect(LogicValue.ofString('xz01').slice(-3, -1),
+          equals(LogicValue.ofString('0zx')));
+      expect(LogicValue.ofString('xz01').slice(-2, -2),
+          equals(LogicValue.ofString('z')));
       expect(
           // isValid - valid
           LogicValue.ofString('0101').isValid,
@@ -492,7 +529,32 @@ void main() {
           // length mismatch
           () => LogicValue.ofString('0000') - LogicValue.ofString('000100'),
           throwsA(isA<Exception>()));
+
+      expect(
+          // % normal
+          LogicValue.ofString('0001') % LogicValue.ofString('0011'),
+          equals(LogicValue.ofString('0001')) // 1 % 3 = 1
+          );
+      expect(
+          // % normal
+          LogicValue.ofString('0100') % LogicValue.ofString('0010'),
+          equals(LogicValue.ofString('0000')) // 4 % 2 = 0
+          );
+      expect(
+          // % 0 mod
+          LogicValue.ofString('0000') % LogicValue.ofString('0011'),
+          equals(LogicValue.ofString('0000')) // 0 % 3 = 0
+          );
+      expect(
+          // mod-by-0
+          () => LogicValue.ofString('0100') % LogicValue.ofString('0000'),
+          throwsA(isA<Exception>()));
+      expect(
+          // % num by num
+          LogicValue.ofString('0100') % LogicValue.ofString('0100'),
+          equals(LogicValue.ofString('0000')));
     });
+
     test('muldiv', () {
       expect(
           // * normal
@@ -789,6 +851,52 @@ void main() {
           // xor - invalid z
           LogicValue.filled(100, LogicValue.z).and(),
           equals(LogicValue.x));
+    });
+  });
+
+  group('64-bit conversions', () {
+    test(
+        '64-bit LogicValues larger than maximum positive value on integer'
+        ' are properly converted when converted from BigInt', () {
+      final extraWide = LogicValue.ofBigInt(
+        BigInt.parse('f' * 16 + 'f0' * 8, radix: 16),
+        128,
+      );
+      final smaller = extraWide.getRange(0, 64);
+      expect(smaller.toInt(), equals(0xf0f0f0f0f0f0f0f0));
+    });
+    test(
+        '64-bit BigInts larger than max pos int value constructing'
+        ' a LogicValue is correct', () {
+      final bigInt64Lv =
+          LogicValue.ofBigInt(BigInt.parse('fa' * 8, radix: 16), 64);
+      expect(bigInt64Lv.toInt(), equals(0xfafafafafafafafa));
+    });
+    test('64-bit binary negatives are converted properly with bin', () {
+      expect(bin('1110' * 16), equals(0xeeeeeeeeeeeeeeee));
+    });
+  });
+
+  group('hash and equality', () {
+    test('hash', () {
+      // thank you to @bbracker-int
+      // https://github.com/intel/rohd/issues/206
+
+      const lvEnum = LogicValue.one;
+      final lvBool = LogicValue.ofBool(true);
+      final lvInt = LogicValue.ofInt(1, 1);
+      final lvBigInt = LogicValue.ofBigInt(BigInt.one, 1);
+      final lvFilled = LogicValue.filled(1, lvEnum);
+
+      for (final lv in [lvBool, lvInt, lvBigInt, lvFilled]) {
+        expect(lv.hashCode, equals(lvEnum.hashCode));
+      }
+    });
+    test('zero-width', () {
+      expect(LogicValue.filled(0, LogicValue.one),
+          equals(LogicValue.filled(0, LogicValue.zero)));
+      expect(LogicValue.filled(0, LogicValue.one).hashCode,
+          equals(LogicValue.filled(0, LogicValue.zero).hashCode));
     });
   });
 }

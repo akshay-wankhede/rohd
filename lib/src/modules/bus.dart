@@ -14,9 +14,13 @@ import 'package:rohd/rohd.dart';
 ///
 /// The returned signal is inclusive of both the [startIndex] and [endIndex].
 /// The output [subset] will have width equal to `|endIndex - startIndex| + 1`.
-class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
-  /// Name for a port of this module.
-  late final String _original, _subset;
+class BusSubset extends Module
+    with InlineSystemVerilog, FullyCombinational, CustomCirct {
+  /// Name for the input port of this module.
+  late final String _original;
+
+  /// Name for the output port of this module.
+  late final String _subset;
 
   /// The input to get a subset of.
   Logic get original => input(_original);
@@ -24,30 +28,46 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
   /// The output, a subset of [original].
   Logic get subset => output(_subset);
 
-  /// Index of the subset.
-  final int startIndex, endIndex;
+  /// Start index of the subset.
+  final int startIndex;
 
+  /// End index of the subset.
+  final int endIndex;
+
+  /// Constructs a [Module] that accesses a subset from [bus] which ranges
+  /// from [startIndex] to [endIndex] (inclusive of both).
+  /// When, [bus] has a width of '1', [startIndex] and [endIndex] are ignored
+  /// in the generated SystemVerilog.
   BusSubset(Logic bus, this.startIndex, this.endIndex,
-      {String name = 'bussubset'})
-      : super(name: name) {
+      {super.name = 'bussubset'}) {
+    // If a converted index value is still -ve then it's an Index out of bounds
+    // on a Logic Bus
     if (startIndex < 0 || endIndex < 0) {
-      throw Exception('Cannot access negative indices!'
-          '  Indices $startIndex and/or $endIndex are invalid.');
+      throw Exception(
+          'Start ($startIndex) and End ($endIndex) must be greater than or '
+          'equal to 0.');
     }
+    // If the +ve indices are more than Logic bus width, Index out of bounds
     if (endIndex > bus.width - 1 || startIndex > bus.width - 1) {
       throw Exception(
-          'Index out of bounds, indices $startIndex and $endIndex must be less than width-1');
+          'Index out of bounds, indices $startIndex and $endIndex must be less'
+          ' than ${bus.width}');
     }
 
-    _original = Module.unpreferredName('original_' + bus.name);
+    // original name can't be unpreferred because you cannot do a bit slice
+    // on expressions in SystemVerilog, and other expressions could have
+    // been in-lined
+    _original = 'original_${bus.name}';
+
     _subset =
-        Module.unpreferredName('subset_${endIndex}_${startIndex}_' + bus.name);
+        Module.unpreferredName('subset_${endIndex}_${startIndex}_${bus.name}');
 
     addInput(_original, bus, width: bus.width);
-    var newWidth = (endIndex - startIndex).abs() + 1;
+    final newWidth = (endIndex - startIndex).abs() + 1;
     addOutput(_subset, width: newWidth);
-    subset
-        .makeUnassignable(); // so that people can't do a slice assign, not (yet?) implemented
+
+    // so that people can't do a slice assign, not (yet?) implemented
+    subset.makeUnassignable();
 
     _setup();
   }
@@ -62,6 +82,11 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
 
   /// Executes the functional behavior of this gate.
   void _execute() {
+    if (original.width == 1) {
+      subset.put(original.value);
+      return;
+    }
+
     if (endIndex < startIndex) {
       subset.put(original.value.getRange(endIndex, startIndex + 1).reversed);
     } else {
@@ -74,17 +99,23 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
     if (inputs.length != 1) {
       throw Exception('BusSubset has exactly one input, but saw $inputs.');
     }
-    var a = inputs[_original]!;
+    final a = inputs[_original]!;
 
-    // SystemVerilog doesn't allow reverse-order select to reverse a bus, so do it manually
-    if (startIndex > endIndex) {
-      return '{' +
-          List.generate(startIndex - endIndex + 1, (i) => '$a[${endIndex + i}]')
-              .join(', ') +
-          '}';
+    // When, input width is 1, ignore startIndex and endIndex
+    if (original.width == 1) {
+      return a;
     }
 
-    var sliceString =
+    // SystemVerilog doesn't allow reverse-order select to reverse a bus,
+    // so do it manually
+    if (startIndex > endIndex) {
+      final swizzleContents =
+          List.generate(startIndex - endIndex + 1, (i) => '$a[${endIndex + i}]')
+              .join(',');
+      return '{$swizzleContents}';
+    }
+
+    final sliceString =
         startIndex == endIndex ? '[$startIndex]' : '[$endIndex:$startIndex]';
     return '$a$sliceString';
   }
@@ -125,11 +156,13 @@ class BusSubset extends Module with InlineSystemVerilog, CustomCirct {
 
 /// A [Module] that performs concatenation of signals into one bigger [Logic].
 ///
-/// The concatenation occurs such that index 0 of [signals] is the *most* significant bit(s).
+/// The concatenation occurs such that index 0 of [signals] is the *most*
+/// significant bit(s).
 ///
-/// You can use convenience functions [LogicSwizzle.swizzle] or [LogicSwizzle.rswizzle] to
-/// more easily use this [Module].
-class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
+/// You can use convenience functions [swizzle()] or [rswizzle()] to more easily
+/// use this [Module].
+class Swizzle extends Module
+    with InlineSystemVerilog, FullyCombinational, CustomCirct {
   final String _out = Module.unpreferredName('swizzled');
 
   /// The output port containing concatenated signals.
@@ -137,35 +170,31 @@ class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
 
   final List<Logic> _swizzleInputs = [];
 
-  Swizzle(List<Logic> signals, {String name = 'swizzle'}) : super(name: name) {
+  /// Constructs a [Module] which concatenates [signals] into one large [out].
+  Swizzle(List<Logic> signals, {super.name = 'swizzle'}) {
     var idx = 0;
     var outputWidth = 0;
-    for (var signal in signals.reversed) {
+    for (final signal in signals.reversed) {
       //reverse so bit 0 is the last thing in the input list
-      var inputName = Module.unpreferredName('in${idx++}');
-      addInput(inputName, signal, width: signal.width);
-      _swizzleInputs.add(input(inputName));
+      final inputName = Module.unpreferredName('in${idx++}');
+      _swizzleInputs.add(
+        addInput(inputName, signal, width: signal.width),
+      );
       outputWidth += signal.width;
     }
     addOutput(_out, width: outputWidth);
 
-    for (var swizzleInput in _swizzleInputs) {
-      // var startIdx = _swizzleInputs.getRange(0, _swizzleInputs.indexOf(swizzleInput)).map((e) => e.width).reduce((a, b) => a+b);
-      var startIdx = 0;
-      for (var xsi in _swizzleInputs) {
-        if (xsi == swizzleInput) break;
-        startIdx += xsi.width;
-      }
-      _execute(startIdx, swizzleInput, null); // for initial values
+    _execute(); // for initial values
+    for (final swizzleInput in _swizzleInputs) {
       swizzleInput.glitch.listen((args) {
-        _execute(startIdx, swizzleInput, args);
+        _execute();
       });
     }
   }
 
   /// Executes the functional behavior of this gate.
-  void _execute(int startIdx, Logic swizzleInput, LogicValueChanged? args) {
-    var updatedVal = out.value.withSet(startIdx, swizzleInput.value);
+  void _execute() {
+    final updatedVal = LogicValue.of(_swizzleInputs.map((e) => e.value));
     out.put(updatedVal);
   }
 
@@ -175,7 +204,7 @@ class Swizzle extends Module with InlineSystemVerilog, CustomCirct {
       throw Exception('This swizzle has ${_swizzleInputs.length} inputs,'
           ' but saw $inputs with ${inputs.length} values.');
     }
-    var inputStr = _swizzleInputs.reversed
+    final inputStr = _swizzleInputs.reversed
         .where((e) => e.width > 0)
         .map((e) => inputs[e.name])
         .join(', ');

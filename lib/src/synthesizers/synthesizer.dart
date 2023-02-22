@@ -43,7 +43,8 @@ abstract class Synthesizer {
   /// Determines whether [module] needs a separate definition or can just be described in-line.
   bool generatesDefinition(Module module) => module is! CustomFunctionality;
 
-  /// Synthesizes [module] into a [SynthesisResult], given the mapping in [moduleToInstanceTypeMap].
+  /// Synthesizes [module] into a [SynthesisResult], given the mapping in
+  /// [moduleToInstanceTypeMap].
   SynthesisResult synthesize(
       Module module, Map<Module, String> moduleToInstanceTypeMap);
 }

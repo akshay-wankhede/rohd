@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2023 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// translations_test.dart
@@ -8,9 +8,11 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+// ignore_for_file: avoid_multiple_declarations_per_line
+
 import 'package:rohd/rohd.dart';
-import 'package:test/test.dart';
 import 'package:rohd/src/utilities/simcompare.dart';
+import 'package:test/test.dart';
 
 class FlopArrayPort {
   final Logic en, ptr, data;
@@ -67,7 +69,7 @@ class FlopArray extends Module {
 
   void _buildLogic() {
     // create local storage bank
-    var storageBank = List<Logic>.generate(
+    final storageBank = List<Logic>.generate(
         numEntries, (i) => Logic(name: 'storageBank_$i', width: dwidth));
 
     // Sequential(lclk, [  // normally this should be here
@@ -80,14 +82,14 @@ class FlopArray extends Module {
         ...List.generate(
             numEntries,
             (entry) => [
-                  ..._wrPorts.map(
-                      (wrPort) => // set storage bank if write enable and pointer matches
-                          If(wrPort.en & wrPort.ptr.eq(entry),
-                              then: [storageBank[entry] < wrPort.data])),
-                  ..._rdPorts.map(
-                      (rdPort) => // read storage bank if read enable and pointer matches
-                          If(rdPort.en & rdPort.ptr.eq(entry),
-                              then: [rdPort.data < storageBank[entry]])),
+                  ..._wrPorts.map((wrPort) =>
+                      // set storage bank if write enable and pointer matches
+                      If(wrPort.en & wrPort.ptr.eq(entry),
+                          then: [storageBank[entry] < wrPort.data])),
+                  ..._rdPorts.map((rdPort) =>
+                      // read storage bank if read enable and pointer matches
+                      If(rdPort.en & rdPort.ptr.eq(entry),
+                          then: [rdPort.data < storageBank[entry]])),
                 ]).expand((e) => e) // flatten
       ]),
     ]);
@@ -95,37 +97,27 @@ class FlopArray extends Module {
 }
 
 void main() {
-  tearDown(() {
-    Simulator.reset();
+  tearDown(() async {
+    await Simulator.reset();
   });
-
-  var signalToWidthMap = {
-    'wrData0': 16,
-    'wrData1': 16,
-    'wrPtr0': 6,
-    'wrPtr1': 6,
-    'rdPtr0': 6,
-    'rdPtr1': 6,
-    'rdData0': 16,
-    'rdData1': 16,
-  };
 
   group('simcompare', () {
     test('translation', () async {
-      var numRdPorts = 2, numWrPorts = 2;
-      var ftm = FlopArray(
+      const numRdPorts = 2;
+      const numWrPorts = 2;
+      final ftm = FlopArray(
         Logic(),
         Logic(),
-        List<Logic>.generate(numRdPorts, (index) => Logic(width: 1)),
+        List<Logic>.generate(numRdPorts, (index) => Logic()),
         List<Logic>.generate(numRdPorts, (index) => Logic(width: 6)),
-        List<Logic>.generate(numWrPorts, (index) => Logic(width: 1)),
+        List<Logic>.generate(numWrPorts, (index) => Logic()),
         List<Logic>.generate(numWrPorts, (index) => Logic(width: 6)),
         List<Logic>.generate(numWrPorts, (index) => Logic(width: 16)),
       );
       await ftm.build();
       // File('tmp.sv').writeAsStringSync(ftm.generateSynth(SystemVerilogSynthesizer()))
       // WaveDumper(ftm);
-      var vectors = [
+      final vectors = [
         Vector({'lrst': 0}, {}),
         Vector({'lrst': 1}, {}),
         Vector({'lrst': 1, 'wrEn0': 0, 'rdEn0': 0, 'wrEn1': 0, 'rdEn1': 0}, {}),
@@ -135,9 +127,7 @@ void main() {
         Vector({'wrEn1': 0, 'rdEn0': 0}, {'rdData0': 0xf}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVectorAll(
-          ftm, ftm.runtimeType.toString(), vectors,
-          signalToWidthMap: signalToWidthMap);
+      final simResult = SimCompare.iverilogVector(ftm, vectors);
       expect(simResult, equals(true));
     });
   });

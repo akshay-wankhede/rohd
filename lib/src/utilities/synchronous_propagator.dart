@@ -8,6 +8,8 @@
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
 
+/***/
+
 /// A controller for a [SynchronousEmitter] that allows for
 /// adding of events of type [T] to be emitted.
 class SynchronousPropagator<T> {
@@ -32,10 +34,10 @@ class SynchronousPropagator<T> {
 class SynchronousEmitter<T> {
   /// Registers a new listener [f] to be notified with an event of
   /// type [T] as an argument whenever that event is to be emitted.
-  void listen(Function(T args) f) => _actions.add(f);
+  void listen(void Function(T args) f) => _actions.add(f);
 
   /// A [List] of actions to perform for each event.
-  final List<Function(T)> _actions = <Function(T)>[];
+  final List<void Function(T)> _actions = <void Function(T)>[];
 
   /// Returns `true` iff this is currently emitting.
   ///
@@ -46,9 +48,19 @@ class SynchronousEmitter<T> {
   /// Sends out [t] to all listeners.
   void _propagate(T t) {
     _isEmitting = true;
-    for (var action in _actions) {
+    for (final action in _actions) {
       action(t);
     }
     _isEmitting = false;
+  }
+
+  /// Tells this emitter to adopt all behavior of [other].
+  ///
+  /// Tells this emitter to perform all the actions of [other] each
+  /// time this would propagate.  Also clears all actions from [other]
+  /// so that it will not execute anything in the future.
+  void adopt(SynchronousEmitter<T> other) {
+    _actions.addAll(other._actions);
+    other._actions.clear();
   }
 }

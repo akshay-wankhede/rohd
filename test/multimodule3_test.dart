@@ -1,8 +1,9 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2023 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// multimodule3_test.dart
-/// Unit tests for a hierarchy of multiple modules and multiple instantiation (another type)
+/// Unit tests for a hierarchy of multiple modules and
+/// multiple instantiation (another type)
 ///
 /// 2021 June 30
 /// Author: Max Korbel <max.korbel@intel.com>
@@ -10,8 +11,8 @@
 
 import 'package:rohd/rohd.dart';
 import 'package:rohd/src/modules/passthrough.dart';
-import 'package:test/test.dart';
 import 'package:rohd/src/utilities/simcompare.dart';
+import 'package:test/test.dart';
 
 // mostly all outputs
 class InnerModule2 extends Module {
@@ -29,7 +30,7 @@ class InnerModule1 extends Module {
     addOutput('m');
     m <= Const(0);
     addOutput('y');
-    y <= Passthrough(InnerModule2().z).b;
+    y <= Passthrough(InnerModule2().z).out;
   }
 }
 
@@ -37,26 +38,25 @@ class TopModule extends Module {
   Logic get x => output('x');
   TopModule() : super(name: 'topmod') {
     addOutput('x');
-    var im1 = InnerModule1();
+    final im1 = InnerModule1();
     x <= im1.y | im1.m;
   }
 }
 
 void main() {
-  tearDown(() {
-    Simulator.reset();
+  tearDown(() async {
+    await Simulator.reset();
   });
 
   group('simcompare', () {
     test('multimodules3', () async {
-      var ftm = TopModule();
+      final ftm = TopModule();
       await ftm.build();
-      var vectors = [
+      final vectors = [
         Vector({}, {'x': 1}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      var simResult = SimCompare.iverilogVectorAll(
-          ftm, ftm.runtimeType.toString(), vectors);
+      final simResult = SimCompare.iverilogVector(ftm, vectors);
       expect(simResult, equals(true));
     });
   });

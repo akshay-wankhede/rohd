@@ -1,4 +1,4 @@
-/// Copyright (C) 2021 Intel Corporation
+/// Copyright (C) 2021-2023 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// counter_wintf_test.dart
@@ -7,10 +7,9 @@
 /// 2021 May 25
 /// Author: Max Korbel <max.korbel@intel.com>
 ///
-
 import 'package:rohd/rohd.dart';
-import 'package:test/test.dart';
 import 'package:rohd/src/utilities/simcompare.dart';
+import 'package:test/test.dart';
 
 enum CounterDirection { inward, outward }
 
@@ -46,11 +45,11 @@ class Counter extends Module {
   }
 
   void _buildLogic() {
-    var nextVal = Logic(name: 'nextVal', width: intf.width);
+    final nextVal = Logic(name: 'nextVal', width: intf.width);
 
     nextVal <= intf.val + 1;
 
-    Sequential((SimpleClockGenerator(10).clk), [
+    Sequential(SimpleClockGenerator(10).clk, [
       If(intf.reset, then: [
         intf.val < 0
       ], orElse: [
@@ -61,15 +60,15 @@ class Counter extends Module {
 }
 
 void main() {
-  tearDown(() {
-    Simulator.reset();
+  tearDown(() async {
+    await Simulator.reset();
   });
 
   group('simcompare', () {
     test('counter', () async {
-      var mod = Counter(CounterInterface(8));
+      final mod = Counter(CounterInterface(8));
       await mod.build();
-      var vectors = [
+      final vectors = [
         Vector({'en': 0, 'reset': 1}, {}),
         Vector({'en': 0, 'reset': 1}, {'val': 0}),
         Vector({'en': 1, 'reset': 1}, {'val': 0}),
@@ -83,9 +82,7 @@ void main() {
         Vector({'en': 0, 'reset': 0}, {'val': 5}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      var simResult = SimCompare.iverilogVectorAll(
-          mod, mod.runtimeType.toString(), vectors,
-          signalToWidthMap: {'val': 8});
+      final simResult = SimCompare.iverilogVector(mod, vectors);
       expect(simResult, equals(true));
     });
   });
