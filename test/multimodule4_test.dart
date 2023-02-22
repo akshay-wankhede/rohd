@@ -73,7 +73,7 @@ void main() {
         ftm.generateSynth(CirctSynthesizer()));
 
     // "z = 1" means it correctly traversed down from inputs
-    expect(synth, contains("_T = 1'h1"));
-    expect(synth, contains('z = _T'));
+    expect(synth, contains("_GEN = 1'h1"));
+    expect(synth, contains('z = _GEN'));
   });
 }
