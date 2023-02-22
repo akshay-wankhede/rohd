@@ -356,7 +356,7 @@ void main() {
         Vector({'a': 1, 'b': 1, 'd': 8}, {'y': 1, 'z': 1, 'x': 1, 'q': 8}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -370,7 +370,7 @@ void main() {
         Vector({'a': 1, 'b': 1}, {'c': 0, 'd': 1}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -381,7 +381,7 @@ void main() {
         Vector({'a': 1}, {'c': 1}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -395,7 +395,7 @@ void main() {
         Vector({'a': 1, 'b': 1}, {'c': 0, 'd': 1}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -407,7 +407,7 @@ void main() {
         Vector({'a': 0}, {'c': 0, 'd': 1}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -438,7 +438,7 @@ void main() {
         Vector({}, {'y': 1, 'z': 1, 'x': 0, 'q': 5}),
       ];
       await SimCompare.checkFunctionalVector(mod, vectors);
-      final simResult = SimCompare.iverilogVector(mod, vectors);
+      final simResult = SimCompare.iverilogVectorAll(mod, vectors);
       expect(simResult, equals(true));
     });
 
@@ -459,7 +459,7 @@ void main() {
       Vector({'a': 1}, {'q': 1}),
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    final simResult = SimCompare.iverilogVector(mod, vectors);
+    final simResult = SimCompare.iverilogVectorAll(mod, vectors);
     expect(simResult, equals(true));
   });
 
@@ -473,7 +473,7 @@ void main() {
       Vector({'a': 0}, {'x': 1}),
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    final simResult = SimCompare.iverilogVector(mod, vectors);
+    final simResult = SimCompare.iverilogVectorAll(mod, vectors);
     expect(simResult, equals(true));
   });
 
@@ -487,7 +487,7 @@ void main() {
       Vector({'a': 0}, {'x': 1}),
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    final simResult = SimCompare.iverilogVector(mod, vectors);
+    final simResult = SimCompare.iverilogVectorAll(mod, vectors);
     expect(simResult, equals(true));
   });
 
@@ -595,7 +595,7 @@ void main() {
       })
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    final simResult = SimCompare.iverilogVector(mod, vectors);
+    final simResult = SimCompare.iverilogVectorAll(mod, vectors);
     expect(simResult, equals(true));
   });
 }

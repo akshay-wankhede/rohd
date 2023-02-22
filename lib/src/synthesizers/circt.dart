@@ -248,10 +248,11 @@ class _CirctSynthesisResult extends SynthesisResult {
         if (constant.isValid) {
           //TODO: need to handle potential BigInt?
           srcName = synthesizer.nextTempName(module);
-          assignmentLines.add(
-              '%$srcName = hw.constant ${constant.toBigInt()} : i${constant.width}');
+          assignmentLines.add(constant._toCirctDefinition(
+              srcName, () => synthesizer.nextTempName(module.parent!)));
         } else {
           //TODO: handle CIRCT invalid constants
+          //here too
           throw UnimplementedError(
               "Don't know how to generate bitwise invalid vector in CIRCT yet...");
         }
@@ -352,12 +353,11 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
         if (inputSynthLogic.logic.width == 0) {
           // shouldn't be using zero-width constants anywhere, omit them
           constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
+          //TODO: why not exception?
         } else {
           final constName = synthesizer.nextTempName(module.parent!);
-          //TODO: does this really need to be BigInt?
-          constDefinitions.add('%$constName = hw.constant '
-              '${inputSynthLogic.constant.toBigInt()} : '
-              'i${inputSynthLogic.logic.width}\n');
+          constDefinitions.add(inputSynthLogic.constant._toCirctDefinition(
+              constName, () => synthesizer.nextTempName(module.parent!)));
           constMap[inputSynthLogic] = constName;
         }
       }
@@ -379,4 +379,43 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
           Map<String, String> outputs) =>
       CirctSynthesizer.instantiationCirctWithParameters(
           module, instanceType, name, inputs, outputs, synthesizer);
+}
+
+extension _CirctConstLogicValue on LogicValue {
+  String _toCirctDefinition(
+    String toAssign,
+    String Function() nextTempName,
+  ) {
+    //cases: int, bigint, all x, all z, mixed invalid
+    if (isValid) {
+      return '%$toAssign = hw.constant ${toBigInt()} : i$width\n';
+    } else {
+      if (this == LogicValue.filled(width, LogicValue.x)) {
+        return '%$toAssign = sv.constantX : i$width\n';
+      } else if (this == LogicValue.filled(width, LogicValue.z)) {
+        return '%$toAssign = sv.constantZ : i$width\n';
+      } else {
+        // Need to swizzle together the proper info
+        final tmpBitNames = List.generate(width, (i) => nextTempName());
+        final lineBuffer = StringBuffer();
+        for (var i = 0; i < width; i++) {
+          lineBuffer.write('%${tmpBitNames[i]} = ');
+          if (this[i].isValid) {
+            lineBuffer.writeln('hw.constant ${this[i].toInt()} : i1');
+          } else if (this[i] == LogicValue.x) {
+            lineBuffer.writeln('sv.constantX : i1');
+          } else if (this[i] == LogicValue.z) {
+            lineBuffer.writeln('sv.constantZ : i1');
+          }
+        }
+
+        final bitsString = tmpBitNames.reversed.map((e) => '%$e').join(', ');
+        final widthsString = List.generate(width, (i) => 'i1').join(', ');
+        lineBuffer
+            .writeln('%$toAssign = comb.concat $bitsString : $widthsString');
+
+        return lineBuffer.toString();
+      }
+    }
+  }
 }

@@ -103,6 +103,8 @@ class ReducedExample extends Module {
   Logic get bytes => output('bytes');
 }
 
+//TODO: use CIRCT pending bug in iverilog: https://github.com/steveicarus/iverilog/issues/872
+
 void main() {
   tearDown(() async {
     await Simulator.reset();

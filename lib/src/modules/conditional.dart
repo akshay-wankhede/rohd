@@ -860,13 +860,10 @@ ${subPadding}end
       Map<String, String> outputsNameMap, String assignOperator) {
     //TODO: support priority & unique once CIRCT supports it (https://github.com/llvm/circt/issues/2907)
 
-    //TODO: new syntax with latest version of CIRCT uses "sv.case casez" type syntax
-    // https://github.com/llvm/circt/blob/main/test/Conversion/ExportVerilog/sv-dialect.mlir#L299
-
     //TODO: support case statements with variables once CIRCT supports it (https://github.com/llvm/circt/issues/2908)
     final expressionName = inputsNameMap[driverInput(expression).name];
     final lines = <String>[
-      'sv.casez %$expressionName : i${expression.width}',
+      'sv.case casez %$expressionName : i${expression.width}',
     ];
     for (final item in items) {
       final conditionName = inputsNameMap[driverInput(item.value).name];
