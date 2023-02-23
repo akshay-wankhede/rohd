@@ -127,8 +127,8 @@ class BusSubset extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 1);
-    assert(outputs.length == 1);
+    assert(inputs.length == 1, 'Expected 1 input.');
+    assert(outputs.length == 1, 'Expected 1 output.');
     final originalName = inputs[_original];
     final subsetName = outputs[_subset];
 
@@ -141,7 +141,7 @@ class BusSubset extends Module
       final bitNames = <String>[];
       for (var i = endIndex; i <= startIndex; i++) {
         final bitName = synthesizer.nextTempName(parent!);
-        lines.add('%$bitName = comb.extract %$originalName from $i :'
+        lines.add('%$bitName = comb.extract %$originalName from $i : '
             '(i${original.width}) -> i1');
         bitNames.add(bitName);
       }
@@ -218,8 +218,9 @@ class Swizzle extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == _swizzleInputs.length);
-    assert(outputs.length == 1);
+    assert(inputs.length == _swizzleInputs.length,
+        'Expected input length matching number of swizzled inputs.');
+    assert(outputs.length == 1, 'Expected one output.');
 
     final outputName = outputs[_out];
 

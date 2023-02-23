@@ -2,23 +2,23 @@ import 'package:rohd/rohd.dart';
 
 /// An object which implements custom simulation functionality.
 ///
-/// Modules that are [CustomFunctionality] must have appropriate synthesis instructions
-/// for supported synthesizers.
+/// Modules that are [CustomFunctionality] must have appropriate synthesis
+/// instructions for supported synthesizers.
 mixin CustomFunctionality on Module {}
 
 abstract class DelegatingCustomFunctionalityModule extends Module
     with CustomFunctionality, CustomSystemVerilog {
   CustomFunctionality get delegate;
 
-  //TODO: add circt in here
-  //TODO: test delegating
+  // TODO(mkorbel1): add circt in here
+  // TODO(mkorbel1): test delegating
 
   @override
   String instantiationVerilog(String instanceType, String instanceName,
       Map<String, String> inputs, Map<String, String> outputs) {
     if (delegate is! CustomSystemVerilog) {
-      throw Exception(
-          'Delegate module $delegate does not support conversion to SystemVerilog.');
+      throw Exception('Delegate module $delegate does not'
+          ' support conversion to SystemVerilog.');
     }
     final svDelegate = delegate as CustomSystemVerilog;
     return svDelegate.instantiationVerilog(

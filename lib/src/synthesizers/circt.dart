@@ -56,6 +56,7 @@ class CirctSynthesizer extends Synthesizer {
     }
 
     final portWidths = Map.fromEntries([
+      // ignore: invalid_use_of_protected_member
       ...inputs.keys.map((e) => MapEntry(e, module.input(e).width)),
       ...outputs.keys.map((e) => MapEntry(e, module.output(e).width))
     ]);
@@ -74,8 +75,9 @@ class CirctSynthesizer extends Synthesizer {
           final intValue = int.tryParse(e.value);
           if (intValue == null) {
             throw Exception(
-                'CIRCT exporter only supports integer parameters for external SV modules,'
-                ' but found ${e.value} for parameter ${e.key}');
+                'CIRCT exporter only supports integer parameters for'
+                ' external SV modules, but found ${e.value} for'
+                ' parameter ${e.key}');
           }
           return '${e.key}: i64 = $intValue';
         }).join(', ')}>';
@@ -107,10 +109,12 @@ class CirctSynthesizer extends Synthesizer {
         ['-export-verilog', '-o=$tmpParsedCirctFile', tmpCirctFile]);
 
     if (circtResult.exitCode != 0) {
-      print(circtResult.stdout);
-      print(circtResult.stderr);
-      throw Exception(
-          'Failed to export verilog from CIRCT, exit code: ${circtResult.exitCode}');
+      // ignore: avoid_print
+      print('STDOUT:\n${circtResult.stdout}');
+      // ignore: avoid_print
+      print('STDERR:\n${circtResult.stderr}');
+      throw Exception('Failed to export verilog from CIRCT,'
+          ' exit code: ${circtResult.exitCode}');
     }
 
     if (deleteTemporaryFiles) {
@@ -124,7 +128,6 @@ class CirctSynthesizer extends Synthesizer {
   }
 }
 
-///TODO
 mixin CustomCirct on Module implements CustomFunctionality {
   String instantiationCirct(
       String instanceType,
@@ -134,7 +137,6 @@ mixin CustomCirct on Module implements CustomFunctionality {
       CirctSynthesizer synthesizer);
 }
 
-///TODO
 mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
   @override
   String instantiationCirct(
@@ -159,7 +161,9 @@ mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
     var sv = instantiationVerilog(
         instanceType, instanceName, remappedInputs, remappedOutputs);
 
-    //TODO: how to do multi-line strings so we don't have to remove comments and new-lines?
+    // TODO(mkorbel1): how to do multi-line strings so we don't have to
+    //  remove comments and new-lines?
+    //  What???  Why do we need this at all?
     sv = sv.replaceAll(RegExp(r'//.*\n'), '');
     sv = sv.replaceAll('\n', '  ');
 
@@ -170,7 +174,7 @@ mixin VerbatimSystemVerilogCirct on CustomSystemVerilog implements CustomCirct {
       ...outputs.keys.map((e) => output(e).width)
     ].map((e) => 'i$e').join(', ');
 
-    //TODO: is it really necessary to define local logic's here?
+    // TODO(mkorbel1): is it really necessary to define local logic's here?
     final outputDeclarations = outputs.entries.map((e) {
       final tmpName = synthesizer.nextTempName(parent!);
       final width = output(e.key).width;
@@ -246,15 +250,15 @@ class _CirctSynthesisResult extends SynthesisResult {
       if (assignment.src.isConst) {
         final constant = assignment.src.constant;
         if (constant.isValid) {
-          //TODO: need to handle potential BigInt?
+          // TODO(mkorbel1): need to handle potential BigInt?
           srcName = synthesizer.nextTempName(module);
           assignmentLines.add(constant._toCirctDefinition(
               srcName, () => synthesizer.nextTempName(module.parent!)));
         } else {
-          //TODO: handle CIRCT invalid constants
-          //here too
+          // TODO(mkorbel1): handle CIRCT invalid constants here too
           throw UnimplementedError(
-              "Don't know how to generate bitwise invalid vector in CIRCT yet...");
+              "Don't know how to generate bitwise invalid vector"
+              ' in CIRCT yet...');
         }
       } else {
         srcName = _referenceName(assignment.src);
@@ -335,14 +339,18 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
 
   @override
   String? instantiationCode(String instanceType) {
-    if (!needsDeclaration) return null;
+    if (!needsDeclaration) {
+      return null;
+    }
 
-    // if all the outputs have zero-width, we don't need to generate anything at all
-    // but if there's no outputs, then its ok to keep it
+    // if all the outputs have zero-width, we don't need to generate
+    // anything at all but if there's no outputs, then its ok to keep it
     if (outputMapping.isNotEmpty) {
       final totalOutputWidth =
           outputMapping.values.map((e) => e.width).reduce((a, b) => a + b);
-      if (totalOutputWidth == 0) return null;
+      if (totalOutputWidth == 0) {
+        return null;
+      }
     }
 
     // collect consts for CIRCT, since you can't in-line them
@@ -353,7 +361,7 @@ class CirctSynthSubModuleInstantiation extends SynthSubModuleInstantiation {
         if (inputSynthLogic.logic.width == 0) {
           // shouldn't be using zero-width constants anywhere, omit them
           constMap[inputSynthLogic] = 'INVALID_ZERO_WIDTH_CONST';
-          //TODO: why not exception?
+          // TODO(mkorbel1): why not exception?
         } else {
           final constName = synthesizer.nextTempName(module.parent!);
           constDefinitions.add(inputSynthLogic.constant._toCirctDefinition(

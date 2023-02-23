@@ -420,7 +420,7 @@ void main() {
         Vector({'a': 1, 'b': 0}, {'c': 1, 'd': 0, 'e': 1}),
         Vector({'a': 1, 'b': 1}, {'c': 0, 'd': 1, 'e': 1}),
       ];
-      //TODO: enable case test once case works with CIRCT
+      // TODO(mkorbel1): enable case test once case works with CIRCT
       await SimCompare.checkFunctionalVector(mod, vectors);
       final simResult = SimCompare.iverilogVector(mod, vectors);
       expect(simResult, equals(true));

@@ -42,7 +42,7 @@ class SystemVerilogSynthesizer extends Synthesizer {
             instanceType, instanceName, inputs, outputs);
       } else if (module is CustomFunctionality) {
         throw Exception('Module $module defines custom functionality but not'
-            'an implementation in SystemVerilog!');
+            ' an implementation in SystemVerilog!');
       }
     }
 
@@ -137,7 +137,7 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
       Map<Module, String> moduleToInstanceTypeMap,
       SystemVerilogSynthesizer synthesizer)
       : super(module, moduleToInstanceTypeMap, synthesizer,
-            SystemVeriogSynthModuleDefinition(module)) {
+            SystemVerilogSynthModuleDefinition(module)) {
     _portsString = _verilogPorts();
     _moduleContentsString = _verilogModuleContents(moduleToInstanceTypeMap);
   }
@@ -224,9 +224,8 @@ class _SystemVerilogSynthesisResult extends SynthesisResult {
   }
 }
 
-//TODO:typo Veriog
-class SystemVeriogSynthModuleDefinition extends SynthModuleDefinition {
-  SystemVeriogSynthModuleDefinition(super.module)
+class SystemVerilogSynthModuleDefinition extends SynthModuleDefinition {
+  SystemVerilogSynthModuleDefinition(super.module)
       : super(ssmiBuilder: SystemVerilogSynthSubModuleInstantiation.new) {
     _collapseChainableModules();
   }
@@ -322,22 +321,26 @@ class SystemVerilogSynthSubModuleInstantiation
 
   SystemVerilogSynthSubModuleInstantiation(super.module, super.name);
 
-  Map<String, String> _moduleInputsMap() {
-    return inputMapping.map((synthLogic, logic) => MapEntry(
-        logic.name, // port name guaranteed to match
-        synthLogicNameToInlineableSynthSubmoduleMap?[
-                    _SystemVerilogSynthesisResult._srcName(synthLogic)]
-                ?.inlineVerilog() ??
-            _SystemVerilogSynthesisResult._srcName(synthLogic)));
-    //TODO: this logic is less efficient than it could be, multiple _srcName calls...
-  }
+  // TODO(mkorbel1): this logic is less efficient than it could be,
+  //  multiple _srcName calls...
+
+  Map<String, String> _moduleInputsMap() =>
+      inputMapping.map((synthLogic, logic) => MapEntry(
+          logic.name, // port name guaranteed to match
+          synthLogicNameToInlineableSynthSubmoduleMap?[
+                      _SystemVerilogSynthesisResult._srcName(synthLogic)]
+                  ?.inlineVerilog() ??
+              _SystemVerilogSynthesisResult._srcName(synthLogic)));
 
   String inlineVerilog() =>
       '(${(module as InlineSystemVerilog).inlineVerilog(_moduleInputsMap())})';
 
   @override
   String? instantiationCode(String instanceType) {
-    if (!needsDeclaration) return null;
+    if (!needsDeclaration) {
+      return null;
+    }
+
     return SystemVerilogSynthesizer.instantiationVerilogWithParameters(
       module,
       instanceType,

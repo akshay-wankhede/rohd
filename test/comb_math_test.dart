@@ -103,7 +103,8 @@ class ReducedExample extends Module {
   Logic get bytes => output('bytes');
 }
 
-//TODO: use CIRCT pending bug in iverilog: https://github.com/steveicarus/iverilog/issues/872
+// TODO(mkorbel1): use CIRCT pending bug in iverilog:
+//  https://github.com/steveicarus/iverilog/issues/872
 
 void main() {
   tearDown(() async {

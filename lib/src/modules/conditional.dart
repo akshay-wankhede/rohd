@@ -117,14 +117,15 @@ abstract class _Always extends Module with CustomSystemVerilog, CustomCirct {
         .map((key, value) => MapEntry(key, synthesizer.nextTempName(parent!)));
     return [
       '//  $instanceName',
-      ...remappedInoutOutputs.entries.map((e) =>
-          '%${e.value} = sv.reg : !hw.inout<i${output(e.key).width}>'), //TODO: looks wrong?
+      ...remappedInoutOutputs.entries.map(
+          (e) => '%${e.value} = sv.reg : !hw.inout<i${output(e.key).width}>'),
       '${_circtAlwaysStatement(inputs)} {',
       _circtAlwaysContents(
           inputs, remappedInoutOutputs, _circtAssignOperator()),
       '}',
       ...outputs.entries.map((e) => '%${e.value} = '
-          'sv.read_inout %${remappedInoutOutputs[output(e.key).name]} : !hw.inout<i${output(e.key).width}>'), //TODO: looks wrong?
+          'sv.read_inout %${remappedInoutOutputs[output(e.key).name]} :'
+          ' !hw.inout<i${output(e.key).width}>'),
     ].join('\n');
   }
 }
@@ -482,7 +483,7 @@ class Sequential extends _Always {
     if (_clks.length == 1) {
       return 'sv.alwaysff(posedge %${inputs[_clks[0].name]})';
     } else {
-      //TODO: CIRCT only supports alwaysff with one edge?
+      // TODO(mkorbel1): CIRCT only supports alwaysff with one edge?
       final triggers =
           _clks.map((clk) => 'posedge %${inputs[clk.name]}').join(', ');
       return 'sv.always $triggers';
@@ -585,7 +586,6 @@ abstract class Conditional {
   String verilogContents(int indent, Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator);
 
-  //TODO: doc comment
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator);
 
@@ -858,9 +858,11 @@ ${subPadding}end
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    //TODO: support priority & unique once CIRCT supports it (https://github.com/llvm/circt/issues/2907)
+    // TODO(mkorbel1): support priority & unique once CIRCT supports
+    //  it (https://github.com/llvm/circt/issues/2907)
 
-    //TODO: support case statements with variables once CIRCT supports it (https://github.com/llvm/circt/issues/2908)
+    // TODO(mkorbel1): support case statements with variables once
+    //  CIRCT supports it (https://github.com/llvm/circt/issues/2908)
     final expressionName = inputsNameMap[driverInput(expression).name];
     final lines = <String>[
       'sv.case $caseType %$expressionName : i${expression.width}',
@@ -1217,17 +1219,18 @@ ${padding}end ''';
         .map((conditional) => conditional.circtContents(
             inputsNameMap, outputsNameMap, assignOperator))
         .join('\n');
-    var circt = '''sv.if %$conditionName {
+    var circt = '''
+sv.if %$conditionName {
 $ifContents
 } ''';
     if (orElse.isNotEmpty) {
-      circt += '''else {
+      circt += '''
+else {
 $elseContents
 } ''';
     }
-    circt += '\n';
 
-    return circt;
+    return '$circt\n';
   }
 }
 
@@ -1251,7 +1254,7 @@ class FlipFlop extends Module with CustomSystemVerilog, CustomCirct {
   /// The output of the flop.
   Logic get q => output(_q);
 
-  //TODO: doc
+  // TODO(mkorbel1): doc string
   int get _width => q.width;
 
   /// Constructs a flip flop which is positive edge triggered on [clk].

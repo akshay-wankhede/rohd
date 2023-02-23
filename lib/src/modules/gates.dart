@@ -83,8 +83,8 @@ class NotGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 1);
-    assert(outputs.length == 1);
+    assert(inputs.length == 1, 'Expected 1 input');
+    assert(outputs.length == 1, 'Expected 1 output');
     final inName = inputs[_inName]!;
     final outName = outputs[_outName]!;
     final neg1 = synthesizer.nextTempName(parent!);
@@ -167,8 +167,8 @@ abstract class _OneInputUnaryGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 1);
-    assert(outputs.length == 1);
+    assert(inputs.length == 1, 'Expected 1 input');
+    assert(outputs.length == 1, 'Expected 1 output');
     final aName = inputs[_inName]!;
     final yName = outputs[_outName]!;
     return [
@@ -214,7 +214,8 @@ abstract class _TwoInputBitwiseGate extends Module
   /// The functional operation to perform for this gate.
   final LogicValue Function(LogicValue in0, LogicValue in1) _op;
 
-  //TODO: rewrite and doc
+  // TODO(mkorbel1): rewrite and doc
+
   /// The `String` representing the operation to perform in generated code.
   final String _svOpStr;
 
@@ -289,8 +290,8 @@ abstract class _TwoInputBitwiseGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 2);
-    assert(outputs.length == 1);
+    assert(inputs.length == 2, 'Expected 2 inputs');
+    assert(outputs.length == 1, 'Expected 1 output');
     final in0 = inputs[_in0Name]!;
     final in1 = inputs[_in1Name]!;
     final outName = outputs[_outName]!;
@@ -333,7 +334,8 @@ abstract class _TwoInputComparisonGate extends Module
   /// The functional operation to perform for this gate.
   final LogicValue Function(LogicValue in0, LogicValue in1) _op;
 
-  //TODO
+  // TODO(mkorbel1): fix doc strings
+
   /// The `String` representing the operation to perform in generated code.
   final String _svOpStr;
   final String _circtOpStr;
@@ -400,8 +402,8 @@ abstract class _TwoInputComparisonGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 2);
-    assert(outputs.length == 1);
+    assert(inputs.length == 2, 'Expected 2 inputs');
+    assert(outputs.length == 1, 'Expected 1 output');
     final in0 = inputs[_in0Name]!;
     final in1 = inputs[_in1Name]!;
     final outName = outputs[_outName]!;
@@ -503,7 +505,8 @@ class _ShiftGate extends Module
 
   List<String> _paddingCirct(String newName, String originalName, Logic signal,
       int targetWidth, CirctSynthesizer synthesizer) {
-    assert(signal.width <= targetWidth);
+    assert(signal.width <= targetWidth,
+        'Cannot pad a signal if it is bigger than the desired width.');
 
     final lines = <String>[];
     final paddingVar = synthesizer.nextTempName(parent!);
@@ -532,39 +535,39 @@ class _ShiftGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 2);
-    assert(outputs.length == 1);
+    assert(inputs.length == 2, 'Expected 2 inputs');
+    assert(outputs.length == 1, 'Expected 1 output');
 
-    //TODO
     final in_ = inputs[_inName]!;
     final shiftAmount = inputs[_shiftAmountName]!;
     final inputWidth = max(_in.width, _shiftAmount.width);
     final inputLines = <String>[];
-    var aWideName = in_, bWideName = shiftAmount;
+    var inWName = in_;
+    var shiftWName = shiftAmount;
     if (_in.width < inputWidth) {
-      aWideName = synthesizer.nextTempName(parent!);
+      inWName = synthesizer.nextTempName(parent!);
       inputLines
-          .addAll(_paddingCirct(aWideName, in_, _in, inputWidth, synthesizer));
+          .addAll(_paddingCirct(inWName, in_, _in, inputWidth, synthesizer));
     }
     if (_shiftAmount.width < inputWidth) {
-      bWideName = synthesizer.nextTempName(parent!);
+      shiftWName = synthesizer.nextTempName(parent!);
       inputLines.addAll(_paddingCirct(
-          bWideName, shiftAmount, _shiftAmount, inputWidth, synthesizer));
+          shiftWName, shiftAmount, _shiftAmount, inputWidth, synthesizer));
     }
 
     final yName = outputs[_outName]!;
-    var yWideName = yName;
+    var outWName = yName;
     final outputLines = <String>[];
     if (out.width < inputWidth) {
-      yWideName = synthesizer.nextTempName(parent!);
-      outputLines.add('%$yName = comb.extract %$yWideName from 0 :'
+      outWName = synthesizer.nextTempName(parent!);
+      outputLines.add('%$yName = comb.extract %$outWName from 0 :'
           ' (i$inputWidth) -> i${out.width}');
     }
 
     return [
       '// $instanceName',
       ...inputLines,
-      '%$yWideName = comb.$_circtOpStr %$aWideName, %$bWideName : i$inputWidth',
+      '%$outWName = comb.$_circtOpStr %$inWName, %$shiftWName : i$inputWidth',
       ...outputLines,
     ].join('\n');
   }
@@ -866,8 +869,9 @@ class Mux extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 3);
-    assert(outputs.length == 1);
+    assert(inputs.length == 3, 'Expected 3 inputs');
+    assert(outputs.length == 1, 'Expected 1 output');
+
     final controlName = inputs[_controlName]!;
     final d0Name = inputs[_d0Name]!;
     final d1Name = inputs[_d1Name]!;
@@ -884,7 +888,7 @@ class Mux extends Module
 /// It always takes two inputs and has one output of width 1.
 class IndexGate extends Module
     with InlineSystemVerilog, FullyCombinational, CustomCirct {
-  //TODO: doc comments
+  // TODO(mkorbel1): doc comments
   late final String _originalName;
   late final String _indexName;
   late final String _selectionName;
@@ -964,8 +968,8 @@ class IndexGate extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 2);
-    assert(outputs.length == 1);
+    assert(inputs.length == 2, 'Expected 2 inputs');
+    assert(outputs.length == 1, 'Expected 1 output');
     final originalName = inputs[_originalName]!;
     final indexName = inputs[_indexName]!;
     final selectionName = outputs[_selectionName]!;
@@ -978,7 +982,6 @@ class IndexGate extends Module
     final newWidth = _original.width + 1;
     final adjustedIndex = synthesizer.nextTempName(parent!);
 
-    //TODO: need to pad index to have same width as original (or truncate)
     String indexAdjust;
     if (_index.width >= newWidth) {
       // truncate
@@ -1077,8 +1080,8 @@ class ReplicationOp extends Module
       Map<String, String> inputs,
       Map<String, String> outputs,
       CirctSynthesizer synthesizer) {
-    assert(inputs.length == 1);
-    assert(outputs.length == 1);
+    assert(inputs.length == 1, 'Expected 1 input');
+    assert(outputs.length == 1, 'Expected 1 output');
     final inName = inputs[_inputName]!;
     final outName = outputs[_outputName]!;
     return '''

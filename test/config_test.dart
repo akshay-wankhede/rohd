@@ -38,7 +38,7 @@ void main() async {
     expect(Config.version, equals(yaml['version']));
   });
 
-  //TODO: tests for circt
+  // TODO(mkorbel1): tests for circt
 
   test('should contains ROHD version number when sv is generated.', () async {
     const version = Config.version;

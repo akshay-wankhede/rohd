@@ -17,8 +17,8 @@ class SimplePipelineModule extends Module {
   }
 }
 
-//TODO: add synthesizer stacktrace to show where code came from
-// and pass to both SV and CIRCT
+// TODO(mkorbel1): add synthesizer stacktrace to show where code came from
+//  and pass to both SV and CIRCT
 
 class RVPipelineModule extends Module {
   RVPipelineModule(Logic a, Logic reset, Logic validIn, Logic readyForOut)

@@ -67,11 +67,14 @@ void main() {
     await ftm.build();
 
     // find a module with 'z' output 2 levels deep
-    assert(ftm.subModules
-        .where((pIn1) => pIn1.subModules
-            .where((pIn2) => pIn2.outputs.containsKey('z'))
-            .isNotEmpty)
-        .isNotEmpty);
+    assert(
+      ftm.subModules
+          .where((pIn1) => pIn1.subModules
+              .where((pIn2) => pIn2.outputs.containsKey('z'))
+              .isNotEmpty)
+          .isNotEmpty,
+      'Expected to find a module with "z" in it 2 levels deep',
+    );
 
     final synth = CirctSynthesizer.convertCirctToSystemVerilog(
         ftm.generateSynth(CirctSynthesizer()));

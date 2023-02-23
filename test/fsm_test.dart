@@ -108,7 +108,7 @@ void main() {
     await Simulator.reset();
   });
 
-  //TODO: enable with CIRCT pending case stuff
+  // TODO(mkorbel1): enable with CIRCT pending case stuff
   group('simcompare', () {
     test('simple fsm', () async {
       final pipem = TestModule(Logic(), Logic(), Logic());

@@ -2,7 +2,6 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 export 'circt.dart';
 export 'synth_builder.dart';
-export 'synth_builder.dart';
 export 'synthesis_result.dart';
 export 'synthesizer.dart';
 export 'systemverilog.dart';

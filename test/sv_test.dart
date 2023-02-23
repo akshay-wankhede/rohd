@@ -34,7 +34,7 @@ class TopMod extends Module {
 }
 
 void main() {
-  //TODO: test opposite with circt
+  // TODO(mkorbel1): test opposite with circt
   test('unsupported exception', () async {
     final mod = TopMod(Logic());
     await mod.build();

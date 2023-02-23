@@ -28,7 +28,7 @@ class TopModule extends Module {
 }
 
 void main() {
-  //TODO: circt
+  // TODO(mkorbel1): implement test with circt also
   test('multimodules5', () async {
     final mod = TopModule(Logic());
     await mod.build();

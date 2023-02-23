@@ -43,7 +43,8 @@ class TopModule extends Module {
   }
 }
 
-//TODO: add tests that use various types of parameters (external types, ints, etc.)
+// TODO(mkorbel1): add tests that use various types of parameters
+//  (external types, ints, etc.)
 
 void main() {
   group('instantiate', () {
@@ -52,9 +53,10 @@ void main() {
       await mod.build();
       final sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(
-          sv,
-          contains(
-              'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+        sv,
+        contains('external_module_name #(.WIDTH(2))'
+            ' external_module(.a(a),.b(b));'),
+      );
     });
 
     test('circt', () async {
@@ -99,15 +101,16 @@ void main() {
       expect(simResult, equals(true));
     });
 
-    //TODO circt test too
+    // TODO(mkorbel1): circt test too
     test('instantiate', () async {
       final mod = TopModule(Logic(width: 2));
       await mod.build();
       final sv = mod.generateSynth(SystemVerilogSynthesizer());
       expect(
-          sv,
-          contains(
-              'external_module_name #(.WIDTH(2)) external_module(.a(a),.b(b));'));
+        sv,
+        contains('external_module_name #(.WIDTH(2))'
+            ' external_module(.a(a),.b(b));'),
+      );
     });
   });
 }

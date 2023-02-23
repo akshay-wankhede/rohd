@@ -51,7 +51,8 @@ abstract class SynthesisResult {
   /// Generates what could go into a file
   String toFileContents();
 
-  //TODO: do we want this stuff below here visible in SynthesisResult, publicly?
+  // TODO(mkorbel1): do we want this stuff below here visible in
+  //  SynthesisResult, publicly?
 
   final Synthesizer synthesizer;
 
