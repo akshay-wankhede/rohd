@@ -483,7 +483,6 @@ class Sequential extends _Always {
     if (_clks.length == 1) {
       return 'sv.alwaysff(posedge %${inputs[_clks[0].name]})';
     } else {
-      // TODO(mkorbel1): CIRCT only supports alwaysff with one edge?
       final triggers =
           _clks.map((clk) => 'posedge %${inputs[clk.name]}').join(', ');
       return 'sv.always $triggers';
@@ -586,6 +585,12 @@ abstract class Conditional {
   String verilogContents(int indent, Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator);
 
+  /// Returns a [String] of CIRCT to be used in generated output.
+  ///
+  /// The [inputsNameMap] and [outputsNameMap] are a mapping from port names
+  /// to SystemVerilog variable names for inputs and outputs, respectively.
+  /// The [assignOperator] is the CIRCT operator that should be used
+  /// for any assignments within this [Conditional].
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator);
 
@@ -681,7 +686,16 @@ enum ConditionalType {
   unique,
 
   /// Expect that at least one condition is true, and the first one is executed.
-  priority
+  priority;
+
+  /// Returns a [String] with the type that can be used for generated code.
+  String _toGeneratedString() {
+    if (this == ConditionalType.none) {
+      return '';
+    } else {
+      return name;
+    }
+  }
 }
 
 /// A block of [CaseItem]s where only the one with a matching [CaseItem.value]
@@ -819,12 +833,11 @@ class Case extends Conditional {
       Map<String, String> outputsNameMap, String assignOperator) {
     final padding = Conditional.calcPadding(indent);
     final expressionName = inputsNameMap[driverInput(expression).name];
-    var caseHeader = caseType;
-    if (conditionalType == ConditionalType.priority) {
-      caseHeader = 'priority $caseType';
-    } else if (conditionalType == ConditionalType.unique) {
-      caseHeader = 'unique $caseType';
-    }
+
+    final caseHeader = [conditionalType._toGeneratedString(), caseType]
+        .where((element) => element.isNotEmpty)
+        .join(' ');
+
     final verilog = StringBuffer('$padding$caseHeader ($expressionName) \n');
     final subPadding = Conditional.calcPadding(indent + 2);
     for (final item in items) {
@@ -858,14 +871,16 @@ ${subPadding}end
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    // TODO(mkorbel1): support priority & unique once CIRCT supports
-    //  it (https://github.com/llvm/circt/issues/2907)
-
     // TODO(mkorbel1): support case statements with variables once
     //  CIRCT supports it (https://github.com/llvm/circt/issues/2908)
     final expressionName = inputsNameMap[driverInput(expression).name];
+
+    final caseHeader = [caseType, conditionalType._toGeneratedString()]
+        .where((element) => element.isNotEmpty)
+        .join(' ');
+
     final lines = <String>[
-      'sv.case $caseType %$expressionName : i${expression.width}',
+      'sv.case $caseHeader %$expressionName : i${expression.width}',
     ];
     for (final item in items) {
       final conditionName = inputsNameMap[driverInput(item.value).name];
