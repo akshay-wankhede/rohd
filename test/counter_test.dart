@@ -68,7 +68,7 @@ void main() {
         Vector({'en': 0, 'reset': 0}, {'val': 5}),
       ];
       await SimCompare.checkFunctionalVector(counter, vectors);
-      final simResult = SimCompare.iverilogVector(counter, vectors);
+      final simResult = SimCompare.iverilogVectorAll(counter, vectors);
       expect(simResult, equals(true));
     });
   });

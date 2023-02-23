@@ -961,7 +961,7 @@ class IndexGate extends Module with InlineSystemVerilog, FullyCombinational {
 /// It takes two inputs (bit and width) and outputs a [Logic] representing
 /// the input bit repeated over the input width
 class ReplicationOp extends Module
-    with InlineSystemVerilog, FullyCombinational {
+    with InlineSystemVerilog, FullyCombinational, CustomCirct {
   // input component name
   final String _inputName;
   // output component name
@@ -1017,5 +1017,22 @@ class ReplicationOp extends Module
     final target = inputs[_inputName]!;
     final width = _multiplier;
     return '{$width{$target}}';
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    assert(inputs.length == 1);
+    assert(outputs.length == 1);
+    final inName = inputs[_inputName]!;
+    final outName = outputs[_outputName]!;
+    return '''
+// $instanceName
+%$outName = comb.replicate %$inName : (i${_input.width}) -> i${replicated.width}
+''';
   }
 }
