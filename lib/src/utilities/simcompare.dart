@@ -175,25 +175,24 @@ abstract class SimCompare {
     List<String> iverilogExtraArgs = const [],
     String? circtBinPath,
     bool allowWarnings = false,
+    String? moduleName,
   }) {
     circtBinPath = circtBinPath ?? _defaultCirctPath();
-    return iverilogVectorMulti(
-      [
-        module.generateSynth(SystemVerilogSynthesizer()),
-        if (circtBinPath != null)
-          CirctSynthesizer.convertCirctToSystemVerilog(
-            module.generateSynth(CirctSynthesizer()),
-            circtBinPath: circtBinPath,
-            deleteTemporaryFiles: !dontDeleteTmpFiles,
-          ),
-      ],
-      module,
-      vectors,
-      dontDeleteTmpFiles: dontDeleteTmpFiles,
-      dumpWaves: dumpWaves,
-      iverilogExtraArgs: iverilogExtraArgs,
-      allowWarnings: allowWarnings,
-    ).fold(true, (a, b) => a & b);
+    return iverilogVectorMulti([
+      module.generateSynth(SystemVerilogSynthesizer()),
+      if (circtBinPath != null)
+        CirctSynthesizer.convertCirctToSystemVerilog(
+          module.generateSynth(CirctSynthesizer()),
+          circtBinPath: circtBinPath,
+          deleteTemporaryFiles: !dontDeleteTmpFiles,
+        ),
+    ], module, vectors,
+            dontDeleteTmpFiles: dontDeleteTmpFiles,
+            dumpWaves: dumpWaves,
+            iverilogExtraArgs: iverilogExtraArgs,
+            allowWarnings: allowWarnings,
+            moduleName: moduleName)
+        .fold(true, (a, b) => a & b);
   }
 
   static List<bool> iverilogVectorMulti(
@@ -204,14 +203,19 @@ abstract class SimCompare {
     bool dumpWaves = false,
     List<String> iverilogExtraArgs = const [],
     bool allowWarnings = false,
+    String? moduleName,
   }) =>
       generatedVerilogs
-          .map((generatedVerilog) => iverilogVector(module, vectors,
-              dontDeleteTmpFiles: dontDeleteTmpFiles,
-              dumpWaves: dumpWaves,
-              iverilogExtraArgs: iverilogExtraArgs,
-              generatedVerilog: generatedVerilog,
-              allowWarnings: allowWarnings))
+          .map((generatedVerilog) => iverilogVector(
+                module,
+                vectors,
+                dontDeleteTmpFiles: dontDeleteTmpFiles,
+                dumpWaves: dumpWaves,
+                iverilogExtraArgs: iverilogExtraArgs,
+                generatedVerilog: generatedVerilog,
+                allowWarnings: allowWarnings,
+                moduleName: moduleName,
+              ))
           .toList();
 
   /// Executes [vectors] against the Icarus Verilog simulator.

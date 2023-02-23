@@ -62,7 +62,7 @@ void main() {
         Vector({'a': 1, 'b': 1}, {'y': 1, 'z': 0, 'z2': 0}),
       ];
       await SimCompare.checkFunctionalVector(ftm, vectors);
-      final simResult = SimCompare.iverilogVector(ftm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(ftm, vectors);
       expect(simResult, equals(true));
     });
   });

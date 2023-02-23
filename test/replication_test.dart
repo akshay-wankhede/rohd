@@ -32,7 +32,7 @@ void main() {
             ReplicationOpModule(Logic(width: originalWidth), multiplier);
         await mod.build();
         await SimCompare.checkFunctionalVector(mod, vectors);
-        final simResult = SimCompare.iverilogVector(mod, vectors);
+        final simResult = SimCompare.iverilogVectorAll(mod, vectors);
         expect(simResult, equals(true));
       }
 

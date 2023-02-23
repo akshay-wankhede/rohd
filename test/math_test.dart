@@ -75,7 +75,7 @@ void main() {
       final gtm = MathTestModule(Logic(width: 8), Logic(width: 8));
       await gtm.build();
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      final simResult = SimCompare.iverilogVector(gtm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(gtm, vectors);
       expect(simResult, equals(true));
     }
 

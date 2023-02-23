@@ -51,7 +51,7 @@ void main() {
       Vector({'a_top': 1}, {'bundle_top': 6}),
     ];
     await SimCompare.checkFunctionalVector(mod, vectors);
-    final simResult = SimCompare.iverilogVector(mod, vectors);
+    final simResult = SimCompare.iverilogVectorAll(mod, vectors);
     expect(simResult, equals(true));
   });
 }

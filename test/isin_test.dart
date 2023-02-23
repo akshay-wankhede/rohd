@@ -84,7 +84,7 @@ void main() {
             {'a': 5, 'list_element_0': 1, 'list_element_1': 2}, {'a_is_in': 0})
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      final simResult = SimCompare.iverilogVector(gtm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(gtm, vectors);
       expect(simResult, equals(true));
     });
 
@@ -96,7 +96,7 @@ void main() {
         Vector({'a': 5}, {'a_is_in': 1}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      final simResult = SimCompare.iverilogVector(gtm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(gtm, vectors);
       expect(simResult, equals(true));
     });
 
@@ -108,7 +108,7 @@ void main() {
         Vector({'a': 1}, {'a_is_in': 0}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      final simResult = SimCompare.iverilogVector(gtm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(gtm, vectors);
       expect(simResult, equals(true));
     });
 
@@ -128,7 +128,7 @@ void main() {
             {'a': 6, 'list_element_0': 1, 'list_element_1': 2}, {'a_is_in': 0}),
       ];
       await SimCompare.checkFunctionalVector(gtm, vectors);
-      final simResult = SimCompare.iverilogVector(gtm, vectors);
+      final simResult = SimCompare.iverilogVectorAll(gtm, vectors);
       expect(simResult, equals(true));
     });
   });
