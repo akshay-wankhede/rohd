@@ -863,7 +863,7 @@ ${subPadding}end
     //TODO: support case statements with variables once CIRCT supports it (https://github.com/llvm/circt/issues/2908)
     final expressionName = inputsNameMap[driverInput(expression).name];
     final lines = <String>[
-      'sv.case casez %$expressionName : i${expression.width}',
+      'sv.case $caseType %$expressionName : i${expression.width}',
     ];
     for (final item in items) {
       final conditionName = inputsNameMap[driverInput(item.value).name];

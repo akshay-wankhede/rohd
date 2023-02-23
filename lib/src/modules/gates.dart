@@ -511,11 +511,11 @@ class _ShiftGate extends Module
 
     if (signed) {
       final signVar = synthesizer.nextTempName(parent!);
-      lines.add(
-          '%$signVar = comb.extract %$originalName from ${signal.width - 1} :'
-          '(i${signal.width}) -> i1');
-      lines.add('%$paddingVar = comb.replicate %$signVar : '
-          '(i1) -> i$paddingWidth');
+      lines
+        ..add('%$signVar = comb.extract %$originalName from ${signal.width - 1}'
+            ' : (i${signal.width}) -> i1')
+        ..add('%$paddingVar = comb.replicate %$signVar'
+            ' : (i1) -> i$paddingWidth');
     } else {
       lines.add('%$paddingVar = hw.constant 0 : i$paddingWidth');
     }
@@ -868,9 +868,9 @@ class Mux extends Module
       CirctSynthesizer synthesizer) {
     assert(inputs.length == 3);
     assert(outputs.length == 1);
-    final controlName = inputs[_control]!;
-    final d0Name = inputs[_d0]!;
-    final d1Name = inputs[_d1]!;
+    final controlName = inputs[_controlName]!;
+    final d0Name = inputs[_d0Name]!;
+    final d1Name = inputs[_d1Name]!;
     final yName = outputs[_outName]!;
     return [
       '// $instanceName',
@@ -882,7 +882,9 @@ class Mux extends Module
 /// A two-input bit index gate [Module].
 ///
 /// It always takes two inputs and has one output of width 1.
-class IndexGate extends Module with InlineSystemVerilog, FullyCombinational {
+class IndexGate extends Module
+    with InlineSystemVerilog, FullyCombinational, CustomCirct {
+  //TODO: doc comments
   late final String _originalName;
   late final String _indexName;
   late final String _selectionName;
@@ -953,6 +955,55 @@ class IndexGate extends Module with InlineSystemVerilog, FullyCombinational {
 
     final idx = inputs[_indexName]!;
     return '$target[$idx]';
+  }
+
+  @override
+  String instantiationCirct(
+      String instanceType,
+      String instanceName,
+      Map<String, String> inputs,
+      Map<String, String> outputs,
+      CirctSynthesizer synthesizer) {
+    assert(inputs.length == 2);
+    assert(outputs.length == 1);
+    final originalName = inputs[_originalName]!;
+    final indexName = inputs[_indexName]!;
+    final selectionName = outputs[_selectionName]!;
+
+    final shifted = synthesizer.nextTempName(parent!);
+
+    // pad the original with an X so that out of bounds gets X
+    final paddedOriginal = synthesizer.nextTempName(parent!);
+    final x1bit = synthesizer.nextTempName(parent!);
+    final newWidth = _original.width + 1;
+    final adjustedIndex = synthesizer.nextTempName(parent!);
+
+    //TODO: need to pad index to have same width as original (or truncate)
+    String indexAdjust;
+    if (_index.width >= newWidth) {
+      // truncate
+      indexAdjust = '''
+%$adjustedIndex = comb.extract %$indexName from 0 : (i${_index.width}) -> i$newWidth
+''';
+    } else {
+      // pad
+      final zeroPad = synthesizer.nextTempName(parent!);
+      final padWidth = newWidth - _index.width;
+      indexAdjust = '''
+%$zeroPad = hw.constant 0 : i$padWidth
+%$adjustedIndex = comb.concat %$zeroPad, %$indexName : i$padWidth, i${_index.width}
+''';
+    }
+
+    // shift right then grab bit 0
+    return '''
+// $instanceName
+$indexAdjust
+%$x1bit = sv.constantX : i1
+%$paddedOriginal = comb.concat %$x1bit, %$originalName : i1, i${_original.width}
+%$shifted = comb.shrs %$paddedOriginal, %$adjustedIndex : i$newWidth
+%$selectionName = comb.extract %$shifted from 0 : (i$newWidth) -> i1
+''';
   }
 }
 
