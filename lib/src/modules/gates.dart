@@ -214,20 +214,21 @@ abstract class _TwoInputBitwiseGate extends Module
   /// The functional operation to perform for this gate.
   final LogicValue Function(LogicValue in0, LogicValue in1) _op;
 
-  // TODO(mkorbel1): rewrite and doc
-
-  /// The `String` representing the operation to perform in generated code.
+  /// The [String] representing the operation to perform in generated SV code,
+  /// placed between the two input signals.
   final String _svOpStr;
 
+  /// The [String] representing the operation to perform in generated CIRCT
+  /// code, postfixed to `comb.`.
   final String _circtOpStr;
 
   /// Constructs a two-input bitwise gate for an abitrary custom functional
   /// implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When
-  /// this [Module] is in-lined as SystemVerilog, it will use [_opStr] as a
-  /// String between the two input signal names (e.g. if [_opStr] was "&",
-  /// generated SystemVerilog may look like "a & b").
+  /// this [Module] is in-lined as SystemVerilog or CIRCT, it will use
+  /// [_svOpStr] and [_circtOpStr], respectively, as the [String] representing
+  /// the operation.
   _TwoInputBitwiseGate(
       this._op, this._svOpStr, this._circtOpStr, Logic in0, dynamic in1,
       {String name = 'gate2'})
@@ -334,19 +335,21 @@ abstract class _TwoInputComparisonGate extends Module
   /// The functional operation to perform for this gate.
   final LogicValue Function(LogicValue in0, LogicValue in1) _op;
 
-  // TODO(mkorbel1): fix doc strings
-
-  /// The `String` representing the operation to perform in generated code.
+  /// The [String] representing the operation to perform in generated SV code,
+  /// placed between the two input signals.
   final String _svOpStr;
+
+  /// The [String] representing the operation to perform in generated CIRCT
+  /// code, postfixed to `comb.icmp `.
   final String _circtOpStr;
 
   /// Constructs a two-input comparison gate for an abitrary custom functional
   /// implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When
-  /// this [Module] is in-lined as SystemVerilog, it will use [_opStr] as a
-  /// String between the two input signal names (e.g. if [_opStr] was ">",
-  /// generated SystemVerilog may look like "a > b").
+  /// this [Module] is in-lined as SystemVerilog or CIRCT, it will use
+  /// [_svOpStr] and [_circtOpStr], respectively, as the [String] representing
+  /// the operation.
   _TwoInputComparisonGate(
       this._op, this._svOpStr, this._circtOpStr, Logic in0, dynamic in1,
       {String name = 'cmp2'})
@@ -441,9 +444,21 @@ class _ShiftGate extends Module
   /// The functional operation to perform for this gate.
   final LogicValue Function(LogicValue in_, LogicValue shiftAmount) _op;
 
-  /// The `String` representing the operation to perform in generated code.
+  /// The [String] representing the operation to perform in generated SV code,
+  /// placed between the two input signals.
   final String _svOpStr;
+
+  /// The [String] representing the operation to perform in generated CIRCT
+  /// code, postfixed to `comb.`.
   final String _circtOpStr;
+
+  /// Constructs a two-input comparison gate for an abitrary custom functional
+  /// implementation.
+  ///
+  /// The function [_op] is executed as the custom functional behavior.  When
+  /// this [Module] is in-lined as SystemVerilog or CIRCT, it will use
+  /// [_svOpStr] and [_circtOpStr], respectively, as the [String] representing
+  /// the operation.
 
   /// Whether or not this gate operates on a signed number.
   final bool signed;
@@ -452,9 +467,9 @@ class _ShiftGate extends Module
   /// implementation.
   ///
   /// The function [_op] is executed as the custom functional behavior.  When
-  /// this [Module] is in-lined as SystemVerilog, it will use [_opStr] as a
-  /// String between the two input signal names (e.g. if [_opStr] was ">>",
-  /// generated SystemVerilog may look like "a >> b").
+  /// this [Module] is in-lined as SystemVerilog or CIRCT, it will use
+  /// [_svOpStr] and [_circtOpStr], respectively, as the [String] representing
+  /// the operation.
   _ShiftGate(
       this._op, this._svOpStr, this._circtOpStr, Logic in_, dynamic shiftAmount,
       {String name = 'gate2', this.signed = false})
@@ -888,9 +903,13 @@ class Mux extends Module
 /// It always takes two inputs and has one output of width 1.
 class IndexGate extends Module
     with InlineSystemVerilog, FullyCombinational, CustomCirct {
-  // TODO(mkorbel1): doc comments
+  /// The name of the input for the original signal input to this gate.
   late final String _originalName;
+
+  /// The name of the input for the index signal input to this gate.
   late final String _indexName;
+
+  /// The name of the output port, the resultant selection.
   late final String _selectionName;
 
   /// The primary input to this gate.

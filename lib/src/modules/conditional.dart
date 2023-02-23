@@ -1085,8 +1085,6 @@ ${padding}end ''');
   @override
   String circtContents(Map<String, String> inputsNameMap,
       Map<String, String> outputsNameMap, String assignOperator) {
-    var circt = '';
-
     final conditions = <String>[];
     var elseContents = '';
 
@@ -1113,15 +1111,16 @@ sv.if %$conditionName {
       }
     }
 
+    final circtBuffer = StringBuffer();
     for (final condition in conditions) {
-      circt += '$condition else {';
+      circtBuffer.write('$condition else {');
     }
-    circt += elseContents;
-    circt += '}' * conditions.length;
+    circtBuffer
+      ..write(elseContents)
+      ..write('}' * conditions.length)
+      ..write('\n');
 
-    circt += '\n';
-
-    return circt;
+    return circtBuffer.toString();
   }
 }
 
@@ -1269,7 +1268,7 @@ class FlipFlop extends Module with CustomSystemVerilog, CustomCirct {
   /// The output of the flop.
   Logic get q => output(_q);
 
-  // TODO(mkorbel1): doc string
+  /// The width of the data for this flop.
   int get _width => q.width;
 
   /// Constructs a flip flop which is positive edge triggered on [clk].
