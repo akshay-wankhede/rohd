@@ -1,4 +1,4 @@
-/// Copyright (C) 2021-2022 Intel Corporation
+/// Copyright (C) 2021-2023 Intel Corporation
 /// SPDX-License-Identifier: BSD-3-Clause
 ///
 /// logic.dart
@@ -335,9 +335,11 @@ class Logic {
   BigInt get valueBigInt => value.toBigInt();
 
   /// Returns `true` iff the value of this signal is valid (no `x` or `z`).
+  @Deprecated('Use value.isValid instead.')
   bool hasValidValue() => value.isValid;
 
   /// Returns `true` iff *all* bits of the current value are floating (`z`).
+  @Deprecated('Use value.isFloating instead.')
   bool isFloating() => value.isFloating;
 
   /// The [Logic] signal that is driving `this`, if any.
@@ -732,6 +734,7 @@ class Logic {
     if (width == 1 &&
         modifiedEndIndex == 0 &&
         modifiedEndIndex == modifiedStartIndex) {
+      // ignore: avoid_returning_this
       return this;
     }
 
@@ -816,6 +819,7 @@ class Logic {
         this,
       ].swizzle();
     } else if (newWidth == width) {
+      // ignore: avoid_returning_this
       return this;
     }
 
@@ -841,5 +845,28 @@ class Logic {
       update,
       getRange(0, startIndex),
     ].swizzle();
+  }
+
+  /// Returns a replicated signal using [ReplicationOp] with new
+  /// width = this.width * [multiplier]
+  /// The input [multiplier] cannot be negative or 0; an exception will be
+  /// thrown, otherwise.
+  Logic replicate(int multiplier) => ReplicationOp(this, multiplier).replicated;
+
+  /// Returns `1` (of [width]=1) if the [Logic] calling this function is in
+  /// [list]. Else `0` (of [width]=1) if not present.
+  ///
+  /// The [list] can be [Logic] or [int] or [bool] or [BigInt] or
+  /// [list] of [dynamic] i.e combinition of aforementioned types.
+  ///
+  Logic isIn(List<dynamic> list) {
+    // By default isLogicIn is not present return `0`:
+    // Empty list corner-case state
+    Logic isLogicIn = Const(0, width: 1);
+    for (final dynamic y in list) {
+      // Iterating through the list to check if the logic is present
+      isLogicIn |= eq(y);
+    }
+    return isLogicIn;
   }
 }

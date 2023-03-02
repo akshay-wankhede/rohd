@@ -164,6 +164,7 @@ abstract class LogicValue {
   /// the width of [other].
   LogicValue _concatenate(LogicValue other) {
     if (other.width == 0) {
+      // ignore: avoid_returning_this
       return this;
     } else if (width == 0) {
       return other;
@@ -447,6 +448,10 @@ abstract class LogicValue {
   LogicValue operator [](int index) {
     final modifiedIndex = (index < 0) ? width + index : index;
     if (modifiedIndex >= width || modifiedIndex < 0) {
+      // The suggestion in the deprecation for this constructor is not available
+      // before 2.19, so keep it in here for now.  Eventually, switch to the
+      // new one.
+      // ignore: deprecated_member_use
       throw IndexError(index, this, 'LogicValueIndexOutOfRange',
           'Index out of range: $modifiedIndex(=$index).', width);
     }
@@ -554,6 +559,7 @@ abstract class LogicValue {
     if (width != 1) {
       throw Exception('Width must be 1, but was $width.');
     }
+    // ignore: avoid_returning_this
     return this;
   }
 
@@ -793,6 +799,7 @@ abstract class LogicValue {
   /// Performs shift operations in the specified direction
   LogicValue _shift(dynamic shamt, _ShiftType direction) {
     if (width == 0) {
+      // ignore: avoid_returning_this
       return this;
     }
     int shamtInt;
@@ -919,6 +926,16 @@ abstract class LogicValue {
       update,
       getRange(0, startIndex),
     ].swizzle();
+  }
+
+  /// Returns new [LogicValue] replicated [multiplier] times. An exception will
+  /// be thrown in case the multiplier is <1
+  LogicValue replicate(int multiplier) {
+    if (multiplier < 1) {
+      throw InvalidMultiplierException(multiplier);
+    }
+
+    return LogicValue.of(List.filled(multiplier, this));
   }
 }
 
